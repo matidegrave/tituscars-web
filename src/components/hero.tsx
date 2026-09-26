@@ -19,6 +19,10 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto w-full max-w-6xl">
         <h1 className="max-w-2xl text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+          {/* La marca completa dentro del único H1 de la home (SEO de "titus cars"). */}
+          <span className="mb-3 block text-sm font-semibold uppercase tracking-[0.2em] text-white/70 sm:text-base">
+            Titus Cars · Autos usados en Córdoba
+          </span>
           Tu próximo auto está en <span className="text-brand">TITUS.</span>
         </h1>
         <p className="mt-4 max-w-xl text-lg text-white/70">

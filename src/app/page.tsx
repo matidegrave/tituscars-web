@@ -12,13 +12,25 @@ import {
   getTotalEnStock,
   getUltimosIngresos,
 } from "@/lib/autos";
-import { SITE_URL } from "@/lib/config";
+import { DIRECCION_AVENIDA, SITE_URL } from "@/lib/config";
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/` },
-};
+// Título y descripción propios de la home (los que Google muestra al buscar
+// "titus cars"). La cantidad de autos sale del stock real: "+100" sólo si hay
+// 100 o más.
+export async function generateMetadata(): Promise<Metadata> {
+  const total = await getTotalEnStock();
+  const cantidad = total >= 100 ? "+100" : String(total);
+  const titulo = `Titus Cars | Autos usados en Córdoba — Agencia en ${DIRECCION_AVENIDA}`;
+  const descripcion = `Agencia de autos usados en Córdoba. ${cantidad} autos con fotos y precio, financiación, permutas y consignación. Escribinos por WhatsApp.`;
+  return {
+    title: { absolute: titulo },
+    description: descripcion,
+    alternates: { canonical: `${SITE_URL}/` },
+    openGraph: { title: titulo, description: descripcion, url: `${SITE_URL}/` },
+  };
+}
 
 export default async function HomePage() {
   const [destacados, ultimosIngresos, totalEnStock, conBaja] = await Promise.all([

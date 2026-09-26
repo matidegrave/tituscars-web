@@ -13,8 +13,10 @@ import { NextResponse, type NextRequest } from "next/server";
  * 4. URLs viejas de Tienda Nube: 308 a lo equivalente acá, SIN arrastrar su
  *    query (variant, utm, page, sort_by…). /search conserva sólo ?q=. Van acá
  *    y no en next.config porque aquellos redirects pasan toda la query.
- * 5. Si sólo cambió la barra o el prefijo: 308 a la ruta limpia.
- * 6. Fichas de auto (/autos/:slug), ver resolverFicha.
+ * 5. Cualquier otra ruta que no sea de esta web: 308 a /autos (URL vieja de
+ *    Tienda Nube que no está en la lista). Nunca 404.
+ * 6. Si sólo cambió la barra o el prefijo: 308 a la ruta limpia.
+ * 7. Fichas de auto (/autos/:slug), ver resolverFicha.
  */
 
 const DOMINIO = "https://tituscars.com";
@@ -29,6 +31,11 @@ type Regla = {
   exacta?: boolean;
 };
 
+/** Una categoría vieja (sólo la ruta exacta) -> /autos con ese filtro. */
+function categorias(nombres: string[], filtro: string): Regla[] {
+  return nombres.map((n) => ({ prefijo: `/${n}`, destino: `/autos?${filtro}`, exacta: true }));
+}
+
 const REDIRECCIONES: Regla[] = [
   // Tienda Nube
   { prefijo: "/productos", destino: "/autos" },
@@ -41,12 +48,16 @@ const REDIRECCIONES: Regla[] = [
   { prefijo: "/checkout", destino: "/autos" },
   { prefijo: "/account", destino: "/" },
   { prefijo: "/mi-cuenta", destino: "/" },
-  // Filtros por carrocería de Tienda Nube -> el mismo filtro acá.
-  { prefijo: "/camionetas", destino: "/autos?carroceria=camioneta", exacta: true },
-  { prefijo: "/suv", destino: "/autos?carroceria=suv", exacta: true },
-  { prefijo: "/utilitarios", destino: "/autos?carroceria=utilitario", exacta: true },
-  { prefijo: "/motos", destino: "/autos?carroceria=moto", exacta: true },
-  { prefijo: "/0-km", destino: "/autos?condicion=0km", exacta: true },
+  // Categorías de Tienda Nube -> el mismo filtro acá, según las carrocerías
+  // que existen hoy (auto, camioneta, suv, utilitario, moto). Sedán y
+  // hatchback son "auto"; las pick-ups, "camioneta". Singular y plural.
+  ...categorias(["camionetas", "camioneta", "pickups", "pickup", "pick-ups", "pick-up"], "carroceria=camioneta"),
+  ...categorias(["suv", "suvs"], "carroceria=suv"),
+  ...categorias(["utilitarios", "utilitario"], "carroceria=utilitario"),
+  ...categorias(["motos", "moto"], "carroceria=moto"),
+  ...categorias(["sedan", "sedanes", "hatchback", "hatchbacks"], "carroceria=auto"),
+  ...categorias(["usados", "autos-usados", "usado"], "condicion=usado"),
+  ...categorias(["0-km", "autos-0km", "nuevos"], "condicion=0km"),
   // /0km es la ruta vieja de ESTA web (tanda 1c/3), por si quedó indexada.
   { prefijo: "/0km", destino: "/autos?condicion=0km", exacta: true },
   // Titus no compra autos: el que quiere vender va a consigna (tanda 2).
@@ -138,6 +149,18 @@ async function resolverFicha(request: NextRequest, slug: string): Promise<NextRe
   return NextResponse.rewrite(urlDestino(request, RUTA_404), { request: { headers } });
 }
 
+// ─── Rutas propias ─────────────────────────────────────────────────────────────
+//
+// Lo que sirve esta web. Todo lo demás es una URL vieja (paso 5). Los archivos
+// (con extensión: robots.txt, sitemap.xml, /brand/logo.png, /reels/x.mp4…)
+// siempre pasan.
+const RUTAS_PROPIAS =
+  /^\/(?:$|autos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|ficha-no-disponible$|api\/|_next\/|_vercel\/|\.well-known\/)/;
+
+function esRutaPropia(pathname: string): boolean {
+  return RUTAS_PROPIAS.test(pathname) || /\.[a-z0-9]+$/i.test(pathname);
+}
+
 // ─── Proxy ─────────────────────────────────────────────────────────────────────
 
 export async function proxy(request: NextRequest) {
@@ -162,12 +185,17 @@ export async function proxy(request: NextRequest) {
   const vieja = redireccion(request, pathname);
   if (vieja) return vieja;
 
-  // 5. Sólo cambió la barra o el prefijo: a la ruta limpia, con su query
+  // 5. Cualquier otra ruta que no es de esta web (URLs viejas de Tienda Nube
+  // que no están en la lista): 308 al catálogo, nunca 404. Va antes de
+  // limpiar la barra para que /blog/ resuelva en un solo salto.
+  if (!esRutaPropia(pathname)) return NextResponse.redirect(urlDestino(request, "/autos"), 308);
+
+  // 6. Sólo cambió la barra o el prefijo: a la ruta limpia, con su query
   if (pathname !== request.nextUrl.pathname) {
     return NextResponse.redirect(urlDestino(request, pathname, request.nextUrl.search), 308);
   }
 
-  // 6. Fichas
+  // 7. Fichas
   const ficha = pathname.match(/^\/autos\/([^/]+)$/);
   if (ficha) return resolverFicha(request, decodeURIComponent(ficha[1]));
 

@@ -6,9 +6,12 @@ import { tituloAuto } from "@/lib/format";
 import {
   DIRECCION_CALLE,
   DIRECCION_LOCALIDAD,
+  FACEBOOK_URL,
   GOOGLE_PUNTAJE,
   HORARIOS_SCHEMA,
   INSTAGRAM_URL,
+  LINKTREE_URL,
+  MERCADOLIBRE_URL,
   RESENAS_CANTIDAD,
   RESENAS_URL,
   SITE_URL,
@@ -117,7 +120,16 @@ export function jsonLdConcesionaria(): JsonLdObjeto {
       opens: h.opens,
       closes: h.closes,
     })),
-    sameAs: [INSTAGRAM_URL, TIKTOK_URL, YOUTUBE_URL, RESENAS_URL],
+    // Los perfiles oficiales: así Google ata la marca "Titus Cars" con el sitio.
+    sameAs: [
+      INSTAGRAM_URL,
+      FACEBOOK_URL,
+      MERCADOLIBRE_URL,
+      LINKTREE_URL,
+      TIKTOK_URL,
+      YOUTUBE_URL,
+      RESENAS_URL,
+    ],
   };
 }
 

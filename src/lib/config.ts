@@ -35,9 +35,16 @@ export const RESENAS_URL = "https://maps.app.goo.gl/Vsu7RQMskAvEWuCm8";
 export const INSTAGRAM_URL = "https://www.instagram.com/titus.cars";
 export const TIKTOK_URL = "https://www.tiktok.com/@titus.cars";
 export const YOUTUBE_URL = "https://www.youtube.com/@titus.cars";
+// Perfiles que Google usa para asociar la marca con el sitio (sameAs del
+// JSON-LD de la home). No se muestran en la web.
+export const FACEBOOK_URL = "https://www.facebook.com/61567275749821";
+export const MERCADOLIBRE_URL = "https://www.mercadolibre.com.ar/pagina/tituscars";
+export const LINKTREE_URL = "https://linktr.ee/tituscar";
 
 // Dirección y teléfono (footer, /contacto y el JSON-LD AutoDealer de la home)
 export const DIRECCION_CALLE = "Av. Duarte Quirós 3996";
+/** La avenida sin la altura (título de la home). */
+export const DIRECCION_AVENIDA = DIRECCION_CALLE.replace(/\s+\d+$/, "");
 export const DIRECCION_LOCALIDAD = "Córdoba";
 export const DIRECCION = `${DIRECCION_CALLE}, ${DIRECCION_LOCALIDAD}`;
 export const TELEFONO_DISPLAY = "+54 9 351 328-3316";
