@@ -155,7 +155,7 @@ async function resolverFicha(request: NextRequest, slug: string): Promise<NextRe
 // (con extensión: robots.txt, sitemap.xml, /brand/logo.png, /reels/x.mp4…)
 // siempre pasan.
 const RUTAS_PROPIAS =
-  /^\/(?:$|autos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|ficha-no-disponible$|api\/|_next\/|_vercel\/|\.well-known\/)/;
+  /^\/(?:$|autos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|ficha-no-disponible$|api\/|_next\/|_vercel\/|\.well-known\/)/;
 
 function esRutaPropia(pathname: string): boolean {
   return RUTAS_PROPIAS.test(pathname) || /\.[a-z0-9]+$/i.test(pathname);

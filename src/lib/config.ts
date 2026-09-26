@@ -47,6 +47,8 @@ export const DIRECCION_CALLE = "Av. Duarte Quirós 3996";
 export const DIRECCION_AVENIDA = DIRECCION_CALLE.replace(/\s+\d+$/, "");
 export const DIRECCION_LOCALIDAD = "Córdoba";
 export const DIRECCION = `${DIRECCION_CALLE}, ${DIRECCION_LOCALIDAD}`;
+/** Google Maps con la ruta hasta la agencia ("cómo llegar"). */
+export const MAPS_COMO_LLEGAR = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`Titus Cars, ${DIRECCION}`)}`;
 export const TELEFONO_DISPLAY = "+54 9 351 328-3316";
 
 // Horarios de atención (/contacto y el JSON-LD AutoDealer). El texto libre es

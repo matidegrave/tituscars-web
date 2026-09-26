@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ResenasBanner } from "@/components/resenas-banner";
 import { WhatsappFloatingButton } from "@/components/whatsapp-floating-button";
+import { OcultarEn } from "@/components/ocultar-en";
 import { VersionGuard } from "@/components/version-guard";
 import { MetaPixel } from "@/components/tracking/meta-pixel";
 import { SCRIPT_REPORTE_ERRORES } from "@/lib/reporte-errores-script";
@@ -47,6 +48,8 @@ export const metadata: Metadata = {
 
 // El Pixel va sólo en el deploy de producción (en local y en los previews, no);
 // además el snippet se autolimita al host tituscars.com.
+const RUTAS_SIN_MARCO = ["/links"];
+
 const pixelActivo = Boolean(PIXEL_ID) && process.env.VERCEL_ENV === "production";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -63,11 +66,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {pixelActivo && <script dangerouslySetInnerHTML={{ __html: SNIPPET_PIXEL(PIXEL_ID) }} />}
       </head>
       <body className="flex min-h-full flex-col">
-        <SiteHeader />
+        {/* /links (bio de Instagram/TikTok) va sola, sin el marco del sitio. */}
+        <OcultarEn rutas={RUTAS_SIN_MARCO}>
+          <SiteHeader />
+        </OcultarEn>
         <main className="flex-1">{children}</main>
-        <ResenasBanner />
-        <SiteFooter />
-        <WhatsappFloatingButton />
+        <OcultarEn rutas={RUTAS_SIN_MARCO}>
+          <ResenasBanner />
+          <SiteFooter />
+          <WhatsappFloatingButton />
+        </OcultarEn>
         <VersionGuard />
         <MetaPixel />
         {pixelActivo && (

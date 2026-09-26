@@ -10,6 +10,7 @@ import {
   DIRECCION,
   SITE_URL,
   TELEFONO_DISPLAY,
+  MAPS_COMO_LLEGAR,
 } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 
 const CONSULTA_TITULO = `Titus Cars, ${DIRECCION}`;
 const MAPS_EMBED_SRC = `https://www.google.com/maps?q=${encodeURIComponent(CONSULTA_TITULO)}&output=embed`;
-const MAPS_DIRECCIONES = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(CONSULTA_TITULO)}`;
+const MAPS_DIRECCIONES = MAPS_COMO_LLEGAR;
 
 export default function ContactoPage() {
   return (

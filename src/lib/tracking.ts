@@ -160,6 +160,18 @@ function dispositivo(): "mobile" | "desktop" {
   }
 }
 
+/**
+ * Ruta + query de la página, sin los parámetros de campaña (utm_*, fbclid,
+ * gclid): esos ya viajan en sus propias columnas. Así /links?utm_source=ig
+ * queda como pagina "/links".
+ */
+function paginaSinCampana(): string {
+  const params = new URLSearchParams(window.location.search);
+  for (const k of [...params.keys()]) if (/^utm_|^fbclid$|^gclid$/.test(k)) params.delete(k);
+  const q = params.toString();
+  return `${window.location.pathname}${q ? `?${q}` : ""}`;
+}
+
 // ─── track() ─────────────────────────────────────────────────────────────────
 
 export function track(tipo: TipoEvento, datos: DatosEvento = {}) {
@@ -194,7 +206,7 @@ export function track(tipo: TipoEvento, datos: DatosEvento = {}) {
       event_id: eventId,
       ...datos,
       url: window.location.href,
-      pagina: `${window.location.pathname}${window.location.search}`,
+      pagina: paginaSinCampana(),
       referrer: document.referrer || undefined,
       session_id: s.session_id,
       utm_source: s.utm_source,
