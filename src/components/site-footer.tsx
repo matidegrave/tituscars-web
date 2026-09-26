@@ -1,13 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
-import { linkWhatsapp } from "@/lib/whatsapp";
+import { FooterWhatsapp } from "@/components/footer-whatsapp";
 import {
   RESENAS_URL,
   INSTAGRAM_URL,
   TIKTOK_URL,
   YOUTUBE_URL,
   DIRECCION,
-  TELEFONO_DISPLAY,
 } from "@/lib/config";
 import { InstagramIcon, YoutubeIcon, StarIcon, TikTokIcon } from "@/components/icons/social-icons";
 
@@ -26,14 +25,7 @@ export function SiteFooter() {
             className="h-9 w-auto"
           />
           <p className="mt-4 text-sm text-white/70">{DIRECCION}</p>
-          <a
-            href={linkWhatsapp()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 block text-sm text-white/70 hover:text-brand"
-          >
-            {TELEFONO_DISPLAY}
-          </a>
+          <FooterWhatsapp className="mt-1 block text-sm text-white/70 hover:text-brand" />
         </div>
 
         <div>

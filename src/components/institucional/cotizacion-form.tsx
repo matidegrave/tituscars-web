@@ -12,36 +12,17 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
+import { WHATSAPP_CONSIGNAS } from "@/lib/config";
 import { linkWhatsapp } from "@/lib/whatsapp";
 import { formatMiles, parseMiles } from "@/lib/format";
-
-export type Modalidad = "virtual" | "fisica" | "no_se";
-
-export const LABEL_MODALIDAD: Record<Modalidad, string> = {
-  virtual: "Virtual",
-  fisica: "Física",
-  no_se: "No sé todavía",
-};
-
-export interface DatosCotizacion {
-  marca: string;
-  modelo: string;
-  anio: string;
-  km: string;
-  nombre: string;
-  telefono: string;
-  modalidad: Modalidad | "";
-}
-
-const VACIO: DatosCotizacion = {
-  marca: "",
-  modelo: "",
-  anio: "",
-  km: "",
-  nombre: "",
-  telefono: "",
-  modalidad: "",
-};
+import { track } from "@/lib/tracking";
+import {
+  COTIZACION_VACIA as VACIO,
+  LABEL_MODALIDAD,
+  mensajeConsigna,
+  type DatosCotizacion,
+  type Modalidad,
+} from "@/lib/cotizacion";
 
 const ITEMS_MODALIDAD: Record<string, string> = {
   virtual: LABEL_MODALIDAD.virtual,
@@ -49,32 +30,22 @@ const ITEMS_MODALIDAD: Record<string, string> = {
   no_se: LABEL_MODALIDAD.no_se,
 };
 
-export type VarianteCotizacion = "consigna" | "venta";
-
-function construirMensaje(variante: VarianteCotizacion, d: DatosCotizacion): string {
-  const partes = [d.marca, d.modelo, d.anio].filter(Boolean).join(" ");
-  const km = d.km ? ` con ${formatMiles(d.km)} km` : "";
-
-  if (variante === "consigna") {
-    const modalidad = d.modalidad ? ` Modalidad: ${LABEL_MODALIDAD[d.modalidad]}.` : "";
-    return `Hola! Quiero consignar mi ${partes}${km}.${modalidad} Soy ${d.nombre}.`;
-  }
-
-  return `Hola! Quiero vender mi ${partes}${km}. Soy ${d.nombre}.`;
-}
-
+/**
+ * Formulario "Pedí tu cotización" de /consigna: arma el mensaje y abre el
+ * WhatsApp de consignaciones.
+ * - Con JS: abre wa.me directo (window.open) y registra lead_form.
+ * - Sin JS (o antes de hidratar): es un <form> real que postea a
+ *   /consigna/whatsapp, que arma el mismo mensaje y redirige. Los obligatorios
+ *   los valida el navegador (required).
+ */
 export function CotizacionForm({
   storageKey,
-  variante,
   textoBoton = "Enviar por WhatsApp",
 }: {
   /** Clave propia de sessionStorage: cada página guarda lo suyo por separado. */
   storageKey: string;
-  /** "consigna" agrega el select de modalidad; "venta" no. */
-  variante: VarianteCotizacion;
   textoBoton?: string;
 }) {
-  const mostrarModalidad = variante === "consigna";
   const [datos, setDatos] = useState<DatosCotizacion>(VACIO);
   const [cargado, setCargado] = useState(false);
   const [enviado, setEnviado] = useState(false);
@@ -115,14 +86,26 @@ export function CotizacionForm({
     datos.nombre.trim() !== "" &&
     datos.telefono.trim() !== "";
 
-  function enviar() {
+  function enviar(evento: React.FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
     if (!valido) return;
-    window.open(linkWhatsapp(construirMensaje(variante, datos)), "_blank", "noopener,noreferrer");
+    track("lead_form", { categoria: "consignacion" });
+    window.open(
+      linkWhatsapp(mensajeConsigna(datos), WHATSAPP_CONSIGNAS),
+      "_blank",
+      "noopener,noreferrer"
+    );
     setEnviado(true);
   }
 
   return (
-    <div className="space-y-4">
+    <form
+      action="/consigna/whatsapp"
+      method="post"
+      target="_blank"
+      onSubmit={enviar}
+      className="space-y-4"
+    >
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="cot-marca" className="mb-1.5">
@@ -130,6 +113,8 @@ export function CotizacionForm({
           </Label>
           <Input
             id="cot-marca"
+            name="marca"
+            required
             value={datos.marca}
             onChange={(e) => set("marca", e.target.value)}
             placeholder="Fiat"
@@ -141,6 +126,8 @@ export function CotizacionForm({
           </Label>
           <Input
             id="cot-modelo"
+            name="modelo"
+            required
             value={datos.modelo}
             onChange={(e) => set("modelo", e.target.value)}
             placeholder="Cronos"
@@ -152,6 +139,7 @@ export function CotizacionForm({
           </Label>
           <Input
             id="cot-anio"
+            name="anio"
             inputMode="numeric"
             value={datos.anio}
             onChange={(e) => set("anio", e.target.value.replace(/\D/g, "").slice(0, 4))}
@@ -164,6 +152,7 @@ export function CotizacionForm({
           </Label>
           <Input
             id="cot-km"
+            name="km"
             inputMode="numeric"
             value={formatMiles(datos.km)}
             onChange={(e) => set("km", String(parseMiles(e.target.value) ?? ""))}
@@ -176,6 +165,8 @@ export function CotizacionForm({
           </Label>
           <Input
             id="cot-nombre"
+            name="nombre"
+            required
             value={datos.nombre}
             onChange={(e) => set("nombre", e.target.value)}
           />
@@ -186,6 +177,8 @@ export function CotizacionForm({
           </Label>
           <Input
             id="cot-telefono"
+            name="telefono"
+            required
             inputMode="tel"
             value={datos.telefono}
             onChange={(e) => set("telefono", e.target.value)}
@@ -193,10 +186,10 @@ export function CotizacionForm({
           />
         </div>
 
-        {mostrarModalidad && (
-          <div className="col-span-2">
+        <div className="col-span-2">
             <Label className="mb-1.5">¿Cómo preferís consignarlo?</Label>
             <Select
+              name="modalidad"
               items={{ "": "Elegí una opción", ...ITEMS_MODALIDAD }}
               value={datos.modalidad}
               onValueChange={(v) => set("modalidad", (v ?? "") as Modalidad | "")}
@@ -212,16 +205,11 @@ export function CotizacionForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        )}
+        </div>
       </div>
 
-      <Button
-        size="lg"
-        className="w-full gap-2 sm:w-fit"
-        disabled={!valido}
-        onClick={enviar}
-      >
+      {/* Deshabilitado sólo con JS: sin JS, el navegador valida los required. */}
+      <Button type="submit" size="lg" className="w-full gap-2 sm:w-fit" disabled={cargado && !valido}>
         <WhatsappIcon className="h-4 w-4" />
         {textoBoton}
       </Button>
@@ -231,6 +219,6 @@ export function CotizacionForm({
           Se abrió WhatsApp con tu mensaje. Si no se abrió, revisá que el navegador no lo haya bloqueado.
         </p>
       )}
-    </div>
+    </form>
   );
 }

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { linkWhatsapp } from "@/lib/whatsapp";
+import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
 import { MenuMovil } from "@/components/menu-movil";
 
 const NAV_LINKS = [
@@ -93,7 +93,7 @@ export function SiteHeader() {
             className="bg-white text-brand hover:bg-white/90"
             nativeButton={false}
             render={
-              <a href={linkWhatsapp()} target="_blank" rel="noopener noreferrer" />
+              <a href={linkWhatsappSegunRuta(pathname)} target="_blank" rel="noopener noreferrer" />
             }
           >
             WhatsApp

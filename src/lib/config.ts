@@ -11,6 +11,19 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://tituscars.
   ""
 );
 
+// Números de WhatsApp (sólo dígitos, formato wa.me). Vienen de variables de
+// entorno de Vercel; ningún componente arma un número por su cuenta.
+// - ventas: todo el sitio;
+// - consignas: /consigna (si faltara la variable, cae en el de ventas).
+export const WHATSAPP_VENTAS = process.env.NEXT_PUBLIC_WHATSAPP ?? "";
+export const WHATSAPP_CONSIGNAS = process.env.NEXT_PUBLIC_WHATSAPP_CONSIGNAS || WHATSAPP_VENTAS;
+
+/** "5493515303698" -> "+54 9 351 530-3698" (celulares de Argentina, 13 dígitos). */
+export function telefonoLegible(numero: string): string {
+  const m = numero.match(/^(54)(9)(\d{3})(\d{3})(\d{4})$/);
+  return m ? `+${m[1]} ${m[2]} ${m[3]} ${m[4]}-${m[5]}` : `+${numero}`;
+}
+
 // Reseñas de Google (bloque antes del footer y en /nosotros). Copiar los
 // números tal cual figuran en el perfil de Google (al 23/09/2026: 4,8 con
 // 195 reseñas); no redondear para arriba.

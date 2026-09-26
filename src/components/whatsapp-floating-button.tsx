@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { linkWhatsapp } from "@/lib/whatsapp";
+import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 
 const RUTA_FICHA = /^\/autos\/[^/]+$/;
@@ -15,7 +15,7 @@ export function WhatsappFloatingButton() {
 
   return (
     <a
-      href={linkWhatsapp("Hola, ¿cómo estás? Quería hacer una consulta.")}
+      href={linkWhatsappSegunRuta(pathname, "Hola, ¿cómo estás? Quería hacer una consulta.")}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Escribinos por WhatsApp"

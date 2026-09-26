@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { bloquearScroll, desbloquearScroll } from "@/lib/scroll-lock";
-import { linkWhatsapp } from "@/lib/whatsapp";
+import { usePathname } from "next/navigation";
+import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
 
 /**
  * Menú del celu superpuesto a la página (no la empuja). Va por portal al
@@ -23,6 +24,7 @@ export function MenuMovil({
   links: { href: string; label: string }[];
   onCerrar: () => void;
 }) {
+  const pathname = usePathname();
   const porLink = useRef(false);
   const cerrar = useRef(onCerrar);
   useEffect(() => {
@@ -78,7 +80,7 @@ export function MenuMovil({
         <Button
           className="mt-2 w-full"
           nativeButton={false}
-          render={<a href={linkWhatsapp()} target="_blank" rel="noopener noreferrer" />}
+          render={<a href={linkWhatsappSegunRuta(pathname)} target="_blank" rel="noopener noreferrer" />}
         >
           WhatsApp
         </Button>

@@ -28,6 +28,8 @@ export interface DatosEvento {
   nombre?: string;
   /** El auto tenía baja de precio (va a Meta; web_eventos no tiene columna). */
   con_baja?: boolean;
+  /** content_category de Meta (ej. "consignacion"). */
+  categoria?: string;
 }
 
 /** Evento estándar de Meta para cada tipo propio (los que no están, sólo van a web_eventos). */
@@ -165,6 +167,7 @@ export function track(tipo: TipoEvento, datos: DatosEvento = {}) {
       if (datos.q) custom.search_string = datos.q;
       if (datos.nombre) custom.content_name = datos.nombre;
       if (datos.con_baja) custom.con_baja = true;
+      if (datos.categoria) custom.content_category = datos.categoria;
       fbq()?.("track", nombreMeta, custom, { eventID: eventId });
     }
 

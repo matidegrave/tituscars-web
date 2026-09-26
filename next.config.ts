@@ -21,7 +21,8 @@ const CSP = [
   "media-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  // El formulario de /consigna sin JS postea acá y redirige a WhatsApp.
+  "form-action 'self' https://wa.me https://api.whatsapp.com",
   "frame-ancestors 'self'",
   "report-uri /api/csp-report",
 ].join("; ");

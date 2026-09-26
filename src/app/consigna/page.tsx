@@ -104,7 +104,7 @@ export default function ConsignaPage() {
             Contanos sobre tu auto y te contactamos por WhatsApp.
           </p>
           <div className="mt-6 rounded-xl border border-border bg-card p-6">
-            <CotizacionForm storageKey="form-consigna" variante="consigna" />
+            <CotizacionForm storageKey="form-consigna" />
           </div>
         </div>
       </section>
