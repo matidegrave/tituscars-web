@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getAutoPorSlug, getSimilares, getSlugActualPorSufijo } from "@/lib/autos";
 import type { AutoCatalogo } from "@/lib/types";
-import { formatKm, formatPrecio, tituloAuto } from "@/lib/format";
+import { bajaDePrecio, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
 import { FichaGallery } from "@/components/ficha/gallery";
 import { FichaTecnica } from "@/components/ficha/ficha-tecnica";
 import { WhatsappCta } from "@/components/ficha/whatsapp-bar";
@@ -87,6 +87,18 @@ export default async function FichaAutoPage({
   const urlFicha = `${protocolo}://${host}/autos/${auto.slug}`;
   const titulo = tituloAuto(auto);
   const precioFormateado = formatPrecio(auto.precio, auto.moneda);
+  const baja = bajaDePrecio(auto);
+  // dd/mm en hora de Córdoba (Intl con es-AR no completa el mes con 0: "22/9").
+  const fechaBaja = (() => {
+    if (!auto.precio_bajo_en) return null;
+    const partes = new Intl.DateTimeFormat("es-AR", {
+      day: "numeric",
+      month: "numeric",
+      timeZone: "America/Argentina/Cordoba",
+    }).formatToParts(new Date(auto.precio_bajo_en));
+    const parte = (tipo: string) => (partes.find((p) => p.type === tipo)?.value ?? "").padStart(2, "0");
+    return `${parte("day")}/${parte("month")}`;
+  })();
   const fotos = auto.fotos && auto.fotos.length > 0
     ? auto.fotos
     : auto.foto_principal
@@ -100,7 +112,12 @@ export default async function FichaAutoPage({
       <JsonLd data={jsonLd} />
       <TrackAlMontar
         tipo="vista_auto"
-        datos={{ auto_id: auto.id, slug: auto.slug, valor: auto.precio_ars }}
+        datos={{
+          auto_id: auto.id,
+          slug: auto.slug,
+          valor: auto.precio_ars,
+          ...(auto.precio_anterior !== null && { con_baja: true }),
+        }}
       />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
@@ -118,7 +135,17 @@ export default async function FichaAutoPage({
           <div>
             <h1 className="text-2xl font-bold uppercase tracking-tight">{titulo}</h1>
             <p className="text-muted-foreground">{auto.anio}</p>
-            <p className="mt-2 text-3xl font-black">{precioFormateado}</p>
+            {baja && (
+              <p className="mt-2 text-base text-muted-foreground line-through">{baja.anterior}</p>
+            )}
+            <p className={baja ? "text-3xl font-black" : "mt-2 text-3xl font-black"}>
+              {precioFormateado}
+            </p>
+            {baja && fechaBaja && (
+              <p className="mt-1 text-sm font-medium text-emerald-700">
+                Bajó de precio el {fechaBaja}
+              </p>
+            )}
             <p className="mt-2 text-sm text-muted-foreground">
               {auto.disponibilidad === "salon"
                 ? `Disponible en nuestro salón, ${DIRECCION_CALLE}`

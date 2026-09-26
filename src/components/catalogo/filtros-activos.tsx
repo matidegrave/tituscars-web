@@ -30,7 +30,8 @@ function href(f: Filtros): string {
 export function FiltrosActivos({ filtros }: { filtros: Filtros }) {
   const chips: Chip[] = [];
 
-  if (filtros.q) {
+  // La búsqueda en vivo del celu (?vivo=1) no genera chip hasta confirmarla.
+  if (filtros.q && !filtros.vivo) {
     chips.push({
       key: "q",
       label: `"${filtros.q}"`,
@@ -136,6 +137,14 @@ export function FiltrosActivos({ filtros }: { filtros: Filtros }) {
       key: "condicion",
       label: filtros.condicion === "0km" ? "0 KM" : "Usados",
       filtrosSinEsto: { ...filtros, condicion: undefined },
+    });
+  }
+
+  if (filtros.baja) {
+    chips.push({
+      key: "baja",
+      label: "Bajaron de precio",
+      filtrosSinEsto: { ...filtros, baja: undefined },
     });
   }
 

@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { MenuMovil } from "@/components/menu-movil";
 
 const NAV_LINKS = [
   { href: "/", label: "Inicio" },
@@ -101,7 +102,8 @@ export function SiteHeader() {
 
         <button
           type="button"
-          aria-label="Abrir menú"
+          aria-label={abierto ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={abierto}
           className="flex h-10 w-10 items-center justify-center text-white lg:hidden"
           onClick={() => setAbierto((v) => !v)}
         >
@@ -109,29 +111,7 @@ export function SiteHeader() {
         </button>
       </div>
 
-      {abierto && (
-        <nav className="flex flex-col gap-1 border-t border-border bg-background px-4 py-3 lg:hidden">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setAbierto(false)}
-              className="rounded-md px-2 py-2.5 text-sm font-medium text-foreground/80 hover:bg-muted hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Button
-            className="mt-2 w-full"
-            nativeButton={false}
-            render={
-              <a href={linkWhatsapp()} target="_blank" rel="noopener noreferrer" />
-            }
-          >
-            WhatsApp
-          </Button>
-        </nav>
-      )}
+      {abierto && <MenuMovil links={NAV_LINKS} onCerrar={() => setAbierto(false)} />}
     </header>
   );
 }

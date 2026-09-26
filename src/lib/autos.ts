@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import type { AutoCatalogo } from "@/lib/types";
 import { POR_PAGINA, type Filtros } from "@/lib/filtros";
 import { filtroBusqueda } from "@/lib/busqueda";
+import { porcentajeBaja } from "@/lib/format";
 import type { FacetRow } from "@/lib/facets";
 
 const TABLA = "catalogo_publico";
@@ -89,6 +90,24 @@ export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCata
   if (filtros.transmision.length > 0) query = query.in("transmision", filtros.transmision);
   if (filtros.carroceria.length > 0) query = query.in("carroceria", filtros.carroceria);
   if (filtros.condicion) query = query.eq("condicion", filtros.condicion);
+  if (filtros.baja) query = query.not("precio_anterior", "is", null);
+
+  const desde = (filtros.page - 1) * POR_PAGINA;
+  const hasta = desde + POR_PAGINA - 1;
+
+  // "Bajaron de precio": primero los que bajaron, por % de baja; después el
+  // resto por fecha. El % no es una columna, así que se ordena acá: se traen
+  // todos los que pasan los filtros (el catálogo es chico) y se pagina en JS.
+  if (filtros.orden === "baja") {
+    const { data } = await query
+      .order("fecha_ingreso", { ascending: false })
+      .order("id", { ascending: true });
+    const autos = ((data ?? []) as AutoCatalogo[])
+      .map((auto, i) => ({ auto, i, pct: porcentajeBaja(auto) }))
+      .sort((a, b) => b.pct - a.pct || a.i - b.i)
+      .map((x) => x.auto);
+    return { autos: autos.slice(desde, hasta + 1), total: autos.length };
+  }
 
   switch (filtros.orden) {
     case "precio_asc":
@@ -112,11 +131,21 @@ export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCata
   // repetirse o saltearse entre tandas del scroll infinito.
   query = query.order("id", { ascending: true });
 
-  const desde = (filtros.page - 1) * POR_PAGINA;
-  const hasta = desde + POR_PAGINA - 1;
   const { data, count } = await query.range(desde, hasta);
 
   return { autos: data ?? [], total: count ?? 0 };
+}
+
+/** Autos con baja de precio reciente, de mayor a menor % de baja (home). */
+export async function getAutosConBaja(limite = 8): Promise<AutoCatalogo[]> {
+  const { data } = await supabase
+    .from(TABLA)
+    .select("*")
+    .neq("estado", "senado")
+    .not("precio_anterior", "is", null);
+  return ((data ?? []) as AutoCatalogo[])
+    .sort((a, b) => porcentajeBaja(b) - porcentajeBaja(a))
+    .slice(0, limite);
 }
 
 export async function getFacetsBase(): Promise<FacetRow[]> {

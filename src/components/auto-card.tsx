@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { formatKm, formatPrecio, tituloAuto } from "@/lib/format";
+import { bajaDePrecio, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
 import { PastillaDisponibilidad } from "@/components/pastilla-disponibilidad";
 import type { AutoCatalogo } from "@/lib/types";
 
@@ -19,6 +19,7 @@ function lineaDatos(auto: AutoCatalogo): string {
 }
 
 export function AutoCard({ auto }: { auto: AutoCatalogo }) {
+  const baja = bajaDePrecio(auto);
   return (
     <Link
       href={`/autos/${auto.slug}`}
@@ -58,9 +59,23 @@ export function AutoCard({ auto }: { auto: AutoCatalogo }) {
           {tituloAuto(auto)}
         </h3>
         <p className="text-sm text-muted-foreground">{lineaDatos(auto)}</p>
-        <p className="mt-auto pt-2 text-xl font-black">
-          {formatPrecio(auto.precio, auto.moneda)}
-        </p>
+        {baja ? (
+          // Con baja: precio anterior tachado + "BAJÓ $X" en verde, arriba del
+          // precio actual. Sin baja, el precio queda exactamente como antes.
+          <div className="mt-auto pt-2">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-xs text-muted-foreground line-through">{baja.anterior}</span>
+              <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                Bajó {baja.diferencia}
+              </span>
+            </div>
+            <p className="text-xl font-black">{formatPrecio(auto.precio, auto.moneda)}</p>
+          </div>
+        ) : (
+          <p className="mt-auto pt-2 text-xl font-black">
+            {formatPrecio(auto.precio, auto.moneda)}
+          </p>
+        )}
       </div>
     </Link>
   );

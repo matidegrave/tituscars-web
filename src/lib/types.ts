@@ -39,6 +39,14 @@ export interface AutoCatalogo {
   moneda: Moneda;
   precio: number;
   precio_ars: number;
+  /**
+   * Baja de precio reciente (la calcula la vista): null salvo que el último
+   * cambio haya sido una baja de 1–30 % hace menos de 30 días. Nunca subas.
+   */
+  precio_anterior: number | null;
+  /** precio_anterior convertido a ARS, como precio_ars. */
+  precio_anterior_ars: number | null;
+  precio_bajo_en: string | null;
   estado: Estado;
   destacado_web: boolean;
   descripcion_items: DescripcionItem[] | null;

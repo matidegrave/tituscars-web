@@ -84,6 +84,7 @@ async function enviarAMeta(tipo: TipoEvento, c: Cuerpo, request: Request) {
   if (q) custom.search_string = q;
   const contenido = texto(c.nombre, 100);
   if (contenido) custom.content_name = contenido;
+  if (c.con_baja === true) custom.con_baja = true;
 
   const evento = {
     event_name: nombre,

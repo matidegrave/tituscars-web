@@ -22,6 +22,7 @@ export const OPCIONES_ORDEN: { value: string; label: string }[] = [
   { value: "precio_desc", label: "Mayor precio" },
   { value: "nuevos", label: "Año más nuevo" },
   { value: "km", label: "Menos km" },
+  { value: "baja", label: "Bajaron de precio" },
 ];
 
 export interface Filtros {
@@ -37,6 +38,13 @@ export interface Filtros {
   transmision: string[];
   carroceria: string[];
   condicion?: Condicion;
+  /** Sólo autos con baja de precio reciente (?baja=1). */
+  baja?: boolean;
+  /**
+   * La búsqueda viene del tipeo en vivo del celu (?vivo=1): filtra igual, pero
+   * no muestra el chip hasta que se confirma con Enter o la lupa.
+   */
+  vivo?: boolean;
   orden: string;
   page: number;
 }
@@ -75,6 +83,8 @@ export function parseFiltros(sp: SearchParamsCatalogo): Filtros {
     transmision: aArray(sp.transmision),
     carroceria: aArray(sp.carroceria),
     condicion: condicionRaw === "usado" || condicionRaw === "0km" ? condicionRaw : undefined,
+    baja: (Array.isArray(sp.baja) ? sp.baja[0] : sp.baja) === "1" || undefined,
+    vivo: (Array.isArray(sp.vivo) ? sp.vivo[0] : sp.vivo) === "1" || undefined,
     orden: (Array.isArray(sp.orden) ? sp.orden[0] : sp.orden) || ORDEN_DEFECTO,
     page: Math.max(1, aNumero(sp.page) ?? 1),
   };
@@ -95,6 +105,8 @@ export function filtrosAParams(f: Filtros): URLSearchParams {
   for (const t of f.transmision) p.append("transmision", t);
   for (const c of f.carroceria) p.append("carroceria", c);
   if (f.condicion) p.set("condicion", f.condicion);
+  if (f.baja) p.set("baja", "1");
+  if (f.q && f.vivo) p.set("vivo", "1");
   if (f.orden && f.orden !== ORDEN_DEFECTO) p.set("orden", f.orden);
   if (f.page && f.page > 1) p.set("page", String(f.page));
 
@@ -125,6 +137,7 @@ export function contarFiltrosActivos(f: Filtros): number {
   n += f.transmision.length;
   n += f.carroceria.length;
   if (f.condicion) n += 1;
+  if (f.baja) n += 1;
   return n;
 }
 

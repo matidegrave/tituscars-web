@@ -7,6 +7,7 @@ import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdConcesionaria } from "@/lib/json-ld";
 import {
+  getAutosConBaja,
   getDestacados,
   getTotalEnStock,
   getUltimosIngresos,
@@ -20,10 +21,11 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [destacados, ultimosIngresos, totalEnStock] = await Promise.all([
+  const [destacados, ultimosIngresos, totalEnStock, conBaja] = await Promise.all([
     getDestacados(8),
     getUltimosIngresos(12),
     getTotalEnStock(),
+    getAutosConBaja(100),
   ]);
 
   const jsonLd = jsonLdConcesionaria();
@@ -41,6 +43,25 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {conBaja.length >= 2 && (
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="text-center text-2xl font-bold tracking-tight md:text-left">
+            Bajaron de precio
+          </h2>
+          <div className="mt-6">
+            <FeaturedCarousel
+              autos={conBaja.slice(0, 8)}
+              totalEnStock={totalEnStock}
+              verMas={{
+                href: "/autos?baja=1",
+                titulo: "Ver todos los que bajaron",
+                detalle: `${conBaja.length} autos bajaron de precio`,
+              }}
+            />
+          </div>
+        </section>
+      )}
 
       <BeneficiosBanner />
 

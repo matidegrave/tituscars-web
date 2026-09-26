@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { X } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { abrirVisorFotos, type VisorAbierto } from "@/components/ficha/visor-fotos";
 import { PastillaDisponibilidad } from "@/components/pastilla-disponibilidad";
 import type { AutoCatalogo, Foto } from "@/lib/types";
 
@@ -29,11 +27,9 @@ export function FichaGallery({
 }) {
   const ordenadas = fotos.length > 0 ? [...fotos].sort((a, b) => a.orden - b.orden) : [];
   const [activo, setActivo] = useState(0);
-  const [lightboxAbierto, setLightboxAbierto] = useState(false);
-  const [api, setApi] = useState<CarouselApi>();
-  const [actual, setActual] = useState(1);
   // Carrusel de la foto principal (swipe): su foto visible es la activa.
   const [apiFoto, setApiFoto] = useState<CarouselApi>();
+  const visor = useRef<VisorAbierto | null>(null);
 
   useEffect(() => {
     if (!apiFoto) return;
@@ -44,44 +40,32 @@ export function FichaGallery({
     };
   }, [apiFoto]);
 
-  // Al cerrar el lightbox, la ficha queda en la foto que se estaba viendo.
-  function cerrarLightbox() {
-    apiFoto?.scrollTo(actual - 1, true);
-    setLightboxAbierto(false);
+  // Visor a pantalla completa (PhotoSwipe, se carga recién al abrirlo). Al
+  // cerrarlo, la ficha queda en la foto que se estaba viendo.
+  const abriendo = useRef(false);
+  async function abrirVisor(indice: number, origen: HTMLElement | null) {
+    // Mientras se descarga PhotoSwipe (la primera vez), un segundo toque no abre otro.
+    if (visor.current || abriendo.current) return;
+    abriendo.current = true;
+    const miniatura = origen?.querySelector("img")?.currentSrc;
+    try {
+      visor.current = await abrirVisorFotos({
+        urls: ordenadas.map((f) => f.url),
+        indice,
+        alt,
+        miniatura,
+        alCambiar: (i) => setActivo(i),
+        alCerrar: (i) => {
+          visor.current = null;
+          apiFoto?.scrollTo(i, true);
+        },
+      });
+    } finally {
+      abriendo.current = false;
+    }
   }
 
-  useEffect(() => {
-    if (!api) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setActual(api.selectedScrollSnap() + 1);
-    api.on("select", () => setActual(api.selectedScrollSnap() + 1));
-  }, [api]);
-
-  // Con el lightbox abierto: la página no scrollea, Esc cierra y las flechas pasan de foto.
-  useEffect(() => {
-    if (!lightboxAbierto) return;
-    const overflowPrevio = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        cerrarLightbox();
-      } else if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        api?.scrollPrev();
-      } else if (event.key === "ArrowRight") {
-        event.preventDefault();
-        api?.scrollNext();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.body.style.overflow = overflowPrevio;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lightboxAbierto, api, actual]);
+  useEffect(() => () => visor.current?.cerrar(), []);
 
   if (ordenadas.length === 0) {
     return (
@@ -92,7 +76,7 @@ export function FichaGallery({
   return (
     <div>
       <div className="relative">
-        {/* Se desliza con el dedo; un toque sin deslizar abre el lightbox (Embla no
+        {/* Se desliza con el dedo; un toque sin deslizar abre el visor (Embla no
             dispara el click cuando hubo arrastre). */}
         <Carousel setApi={setApiFoto} className="overflow-hidden rounded-xl bg-muted">
           <CarouselContent className="ml-0">
@@ -100,7 +84,7 @@ export function FichaGallery({
               <CarouselItem key={foto.url + i} className="pl-0">
                 <button
                   type="button"
-                  onClick={() => setLightboxAbierto(true)}
+                  onClick={(e) => void abrirVisor(i, e.currentTarget)}
                   aria-label={`Ver foto ${i + 1} de ${ordenadas.length} en grande`}
                   className="relative block aspect-[4/3] w-full"
                 >
@@ -174,49 +158,6 @@ export function FichaGallery({
         </div>
       )}
 
-      {lightboxAbierto && (
-        <div className="fixed inset-x-0 top-0 z-[60] flex h-[100dvh] flex-col bg-black">
-          <div className="flex shrink-0 items-center justify-between px-4 py-3 text-white">
-            <span className="text-sm">
-              {actual} / {ordenadas.length}
-            </span>
-            <button
-              type="button"
-              onClick={cerrarLightbox}
-              aria-label="Cerrar"
-              className="rounded-full p-2 hover:bg-white/10"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-
-          <div className="min-h-0 flex-1 px-2 pb-6">
-            <Carousel
-              setApi={setApi}
-              opts={{ align: "center", startIndex: activo, loop: true }}
-              className="h-full w-full [&>[data-slot=carousel-content]]:h-full"
-            >
-              <CarouselContent className="h-full">
-                {ordenadas.map((foto, i) => (
-                  <CarouselItem key={foto.url + i} className="h-full">
-                    <div className="relative h-full w-full">
-                      <Image
-                        src={foto.url}
-                        alt={alt}
-                        fill
-                        sizes="100vw"
-                        className="object-contain"
-                      />
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="left-2 border-white/30 bg-black/50 text-white hover:bg-black/70 hover:text-white sm:left-4" />
-              <CarouselNext className="right-2 border-white/30 bg-black/50 text-white hover:bg-black/70 hover:text-white sm:right-4" />
-            </Carousel>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
