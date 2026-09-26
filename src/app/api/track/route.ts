@@ -1,5 +1,6 @@
 import { after } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseServidor } from "@/lib/supabase-servidor";
+import { demasiadas, dentroDelLimite, ipDe } from "@/lib/rate-limit";
 import { EVENTO_META, type TipoEvento } from "@/lib/tracking";
 
 // Eventos de medición del navegador (lib/tracking.ts): fila en web_eventos y,
@@ -39,7 +40,7 @@ function leerCookie(header: string | null, nombre: string): string | undefined {
 
 async function guardarEvento(tipo: TipoEvento, c: Cuerpo) {
   const autoId = texto(c.auto_id, 36);
-  const { error } = await supabase.from("web_eventos").insert({
+  const { error } = await supabaseServidor.from("web_eventos").insert({
     tipo,
     auto_id: autoId && UUID.test(autoId) ? autoId : null,
     slug: texto(c.slug, 200),
@@ -117,6 +118,8 @@ async function enviarAMeta(tipo: TipoEvento, c: Cuerpo, request: Request) {
 }
 
 export async function POST(request: Request) {
+  // 60 eventos por minuto por IP; pasado eso, 429 sin tocar la base.
+  if (!dentroDelLimite(`track:${ipDe(request)}`, 60, 60 * 1000)) return demasiadas();
   try {
     const cuerpo = await request.text();
     if (cuerpo.length > MAXIMO_BYTES) return new Response(null, { status: 204 });

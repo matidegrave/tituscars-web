@@ -5,7 +5,6 @@ import { CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
 import { linkWhatsapp } from "@/lib/whatsapp";
 import { track } from "@/lib/tracking";
 import { formatMiles, formatPrecio, parseMiles } from "@/lib/format";
@@ -149,7 +148,11 @@ export function BusquedaAMedida({
     );
   }
 
-  const valido = datos.nombre.trim().length >= 2 && datos.celular.trim().length >= 6;
+  // Mismas reglas que valida /api/busqueda-a-medida: celular de 8 a 15 dígitos
+  // (se pueden escribir espacios, guiones, paréntesis y +).
+  const digitosCelular = datos.celular.replace(/\D/g, "").length;
+  const celularValido = /^[\d\s()+-]*$/.test(datos.celular) && digitosCelular >= 8 && digitosCelular <= 15;
+  const valido = datos.nombre.trim().length >= 2 && celularValido;
 
   async function enviar(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -167,23 +170,34 @@ export function BusquedaAMedida({
     // la manda a WhatsApp.
     const pestana = window.open("", "_blank");
 
-    const { error } = await supabase.from("busquedas_web").insert({
-      nombre: datos.nombre.trim().slice(0, 80),
-      celular: datos.celular.trim().slice(0, 30),
-      modelos_buscados: datos.modelos.trim().slice(0, 300) || null,
-      entrega_vehiculo: datos.entrega === true,
-      entrega_modelo: datos.entrega ? datos.entregaModelo.trim().slice(0, 120) || null : null,
-      entrega_anio: datos.entrega ? anioValido(datos.entregaAnio) : null,
-      entrega_km: datos.entrega ? kmValido(datos.entregaKm) : null,
-      financia: datos.pago === "financiado" || datos.pago === "ambos",
-      contado: datos.pago === "contado" || datos.pago === "ambos",
-      presupuesto_max: datos.modoPresupuesto === "valor" ? datos.presupuesto : null,
-      observaciones: observacionesAGuardar(datos),
-      pagina: `${window.location.pathname}${window.location.search}`.slice(0, 300),
-      auto_slug: autoSlug?.slice(0, 200) ?? null,
-    });
-    if (error) console.error("busquedas_web insert", error.message);
-    else track("lead_form", { nombre: "busqueda_a_medida", slug: autoSlug });
+    let guardado = false;
+    try {
+      const res = await fetch("/api/busqueda-a-medida", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          web: datos.trampa,
+          nombre: datos.nombre.trim().slice(0, 80),
+          celular: datos.celular.trim(),
+          modelos_buscados: datos.modelos.trim().slice(0, 300) || null,
+          entrega_vehiculo: datos.entrega === true,
+          entrega_modelo: datos.entrega ? datos.entregaModelo.trim().slice(0, 120) || null : null,
+          entrega_anio: datos.entrega ? anioValido(datos.entregaAnio) : null,
+          entrega_km: datos.entrega ? kmValido(datos.entregaKm) : null,
+          financia: datos.pago === "financiado" || datos.pago === "ambos",
+          contado: datos.pago === "contado" || datos.pago === "ambos",
+          presupuesto_max: datos.modoPresupuesto === "valor" ? datos.presupuesto : null,
+          observaciones: observacionesAGuardar(datos),
+          pagina: `${window.location.pathname}${window.location.search}`.slice(0, 300),
+          auto_slug: autoSlug?.slice(0, 200) ?? null,
+        }),
+      });
+      guardado = res.ok;
+      if (!res.ok) console.error("busqueda-a-medida", res.status);
+    } catch (e) {
+      console.error("busqueda-a-medida", e);
+    }
+    if (guardado) track("lead_form", { nombre: "busqueda_a_medida", slug: autoSlug });
 
     // Salga bien o mal el insert, el pedido llega igual por WhatsApp.
     const link = linkWhatsapp(construirMensaje(datos, autoTitulo));
@@ -260,15 +274,22 @@ export function BusquedaAMedida({
                 <Input
                   id="bam-celular"
                   required
-                  minLength={6}
+                  minLength={8}
                   maxLength={30}
                   inputMode="tel"
                   autoComplete="tel"
                   placeholder="351 123 4567"
                   value={datos.celular}
                   onChange={(e) => set("celular", e.target.value)}
+                  aria-invalid={datos.celular.trim() !== "" && !celularValido}
+                  aria-describedby="bam-celular-ayuda"
                   className="h-10 bg-background"
                 />
+                {datos.celular.trim() !== "" && !celularValido && (
+                  <p id="bam-celular-ayuda" className="mt-1 text-xs text-destructive">
+                    Con código de área, sólo números (de 8 a 15).
+                  </p>
+                )}
               </div>
             </div>
 
