@@ -23,8 +23,6 @@ const NOMBRE = "Titus Cars";
 const TELEFONO = "+5493513283316";
 const CODIGO_POSTAL = "5009";
 
-const vendedor = { "@type": "AutoDealer", name: NOMBRE, url: SITE_URL };
-
 const absoluta = (url: string) => (url.startsWith("http") ? url : `${SITE_URL}${url}`);
 
 /** Descripción del auto para buscadores: los items de la publicación (sin encabezado ni cierre). */
@@ -34,7 +32,11 @@ function descripcionAuto(auto: AutoCatalogo): string | undefined {
   return lista.length > 0 ? lista.join(", ") : undefined;
 }
 
-/** schema.org Car (subtipo de Product) para la ficha. */
+/**
+ * schema.org Car para la ficha. Va tipado como ["Car", "Product"]: Car ya es
+ * subtipo de Product en schema.org, pero Google sólo lo toma como producto
+ * (fragmento con precio) si el tipo Product está declarado explícitamente.
+ */
 export function jsonLdAuto(auto: AutoCatalogo): JsonLdObjeto {
   const url = `${SITE_URL}/autos/${auto.slug}`;
   const condicion =
@@ -44,7 +46,7 @@ export function jsonLdAuto(auto: AutoCatalogo): JsonLdObjeto {
 
   return {
     "@context": "https://schema.org",
-    "@type": "Car",
+    "@type": ["Car", "Product"],
     name: `${tituloAuto(auto)} ${auto.anio}`,
     brand: { "@type": "Brand", name: auto.marca },
     model: auto.modelo,
@@ -73,16 +75,15 @@ export function jsonLdAuto(auto: AutoCatalogo): JsonLdObjeto {
         availability: "https://schema.org/InStock",
         url,
         itemCondition: condicion,
-        seller: vendedor,
+        seller: datosConcesionaria(),
       },
     }),
   };
 }
 
-/** schema.org AutoDealer para la home. */
-export function jsonLdConcesionaria(): JsonLdObjeto {
+/** La concesionaria: vendedor de cada auto y el AutoDealer de la home. */
+function datosConcesionaria(): JsonLdObjeto {
   return {
-    "@context": "https://schema.org",
     "@type": "AutoDealer",
     name: NOMBRE,
     url: SITE_URL,
@@ -97,6 +98,14 @@ export function jsonLdConcesionaria(): JsonLdObjeto {
       postalCode: CODIGO_POSTAL,
       addressCountry: "AR",
     },
+  };
+}
+
+/** schema.org AutoDealer para la home. */
+export function jsonLdConcesionaria(): JsonLdObjeto {
+  return {
+    "@context": "https://schema.org",
+    ...datosConcesionaria(),
     aggregateRating: {
       "@type": "AggregateRating",
       ratingValue: Number(GOOGLE_PUNTAJE.replace(",", ".")),
