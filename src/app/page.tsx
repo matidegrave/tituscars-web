@@ -5,18 +5,13 @@ import { BeneficiosBanner } from "@/components/beneficios-banner";
 import { AccesosBlock } from "@/components/accesos-block";
 import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
+import { jsonLdConcesionaria } from "@/lib/json-ld";
 import {
   getDestacados,
   getTotalEnStock,
   getUltimosIngresos,
 } from "@/lib/autos";
-import {
-  SITE_URL,
-  DIRECCION_CALLE,
-  DIRECCION_LOCALIDAD,
-  TELEFONO_DISPLAY,
-  HORARIOS_SCHEMA,
-} from "@/lib/config";
+import { SITE_URL } from "@/lib/config";
 
 export const revalidate = 60;
 
@@ -31,27 +26,7 @@ export default async function HomePage() {
     getTotalEnStock(),
   ]);
 
-  const nombreSitio = process.env.NEXT_PUBLIC_SITE_NAME ?? "Titus Cars";
-
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "AutoDealer",
-    name: nombreSitio,
-    url: SITE_URL,
-    telephone: TELEFONO_DISPLAY,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: DIRECCION_CALLE,
-      addressLocality: DIRECCION_LOCALIDAD,
-      addressCountry: "AR",
-    },
-    openingHoursSpecification: HORARIOS_SCHEMA.map((h) => ({
-      "@type": "OpeningHoursSpecification",
-      dayOfWeek: h.dayOfWeek,
-      opens: h.opens,
-      closes: h.closes,
-    })),
-  };
+  const jsonLd = jsonLdConcesionaria();
 
   return (
     <>

@@ -9,6 +9,8 @@ import { CatalogoInfinito } from "@/components/catalogo/catalogo-infinito";
 import { BuscadorCelu } from "@/components/catalogo/buscador-celu";
 import { EstadoVacio } from "@/components/catalogo/estado-vacio";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
+import { JsonLd } from "@/components/json-ld";
+import { jsonLdListaAutos } from "@/lib/json-ld";
 import { getAnios, getAutosPaginados, getFacetsBase } from "@/lib/autos";
 import { calcularFacets } from "@/lib/facets";
 import {
@@ -48,6 +50,7 @@ export default async function CatalogoPage({
     // Fondo gris para que las tarjetas blancas se despeguen.
     <div className="bg-zinc-100">
       <TrackAlMontar tipo="vista_catalogo" />
+      <JsonLd data={jsonLdListaAutos(autos)} />
       <div className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <aside className="hidden w-[280px] shrink-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:flex lg:max-h-[calc(100vh-var(--header-h)-2rem)] lg:flex-col">

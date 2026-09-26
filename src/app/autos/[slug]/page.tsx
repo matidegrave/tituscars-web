@@ -12,6 +12,7 @@ import { VideoSection } from "@/components/ficha/video";
 import { Confianza } from "@/components/ficha/confianza";
 import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
+import { jsonLdAuto } from "@/lib/json-ld";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
 import { BusquedaAMedida } from "@/components/busqueda-a-medida";
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
@@ -92,32 +93,7 @@ export default async function FichaAutoPage({
       ? [{ url: auto.foto_principal, orden: 0, principal: true }]
       : [];
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Car",
-    name: titulo,
-    brand: { "@type": "Brand", name: auto.marca },
-    model: [auto.modelo, auto.version].filter(Boolean).join(" "),
-    vehicleModelDate: String(auto.anio),
-    // Datos estructurados para buscadores: km real (el redondeo es solo visual).
-    ...(auto.km !== null
-      ? {
-          mileageFromOdometer: {
-            "@type": "QuantitativeValue",
-            value: auto.km,
-            unitCode: "KMT",
-          },
-        }
-      : {}),
-    ...(auto.foto_principal ? { image: auto.foto_principal } : {}),
-    offers: {
-      "@type": "Offer",
-      price: auto.precio,
-      priceCurrency: auto.moneda,
-      availability:
-        auto.estado === "senado" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
-    },
-  };
+  const jsonLd = jsonLdAuto(auto);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 pb-28 sm:pb-8">
