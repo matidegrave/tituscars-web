@@ -17,7 +17,7 @@ export interface VisorAbierto {
 const ANCHO = 1600;
 const ALTO = 1200;
 
-/** La foto por el optimizador de Next (webp, del ancho justo para la pantalla). */
+/** La foto por el optimizador de Next (AVIF/WebP, del ancho justo para la pantalla). */
 function optimizada(url: string, ancho: number): string {
   return `/_next/image?url=${encodeURIComponent(url)}&w=${ancho}&q=75`;
 }

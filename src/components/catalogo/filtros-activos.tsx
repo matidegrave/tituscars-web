@@ -30,8 +30,7 @@ function href(f: Filtros): string {
 export function FiltrosActivos({ filtros }: { filtros: Filtros }) {
   const chips: Chip[] = [];
 
-  // La búsqueda en vivo del celu (?vivo=1) no genera chip hasta confirmarla.
-  if (filtros.q && !filtros.vivo) {
+  if (filtros.q) {
     chips.push({
       key: "q",
       label: `"${filtros.q}"`,

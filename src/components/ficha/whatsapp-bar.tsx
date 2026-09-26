@@ -1,11 +1,12 @@
 "use client";
 
-import { Share2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Share2 } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
-import { toast } from "@/components/ui/toast";
 import { track } from "@/lib/tracking";
 
-async function compartir(titulo: string) {
+/** true si copió el link (sin share nativo); false si usó el share o falló. */
+async function compartir(titulo: string): Promise<boolean> {
   const url = window.location.href;
 
   if (navigator.share) {
@@ -14,11 +15,15 @@ async function compartir(titulo: string) {
     } catch {
       // el usuario canceló el share nativo, no hacemos nada
     }
-    return;
+    return false;
   }
 
-  await navigator.clipboard.writeText(url);
-  toast.add({ title: "Link copiado" });
+  try {
+    await navigator.clipboard.writeText(url);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -37,9 +42,18 @@ export function WhatsappCta({
   /** Datos del auto para el click_whatsapp / Lead (los lee MetaPixel del link). */
   trackAuto: { auto_id: string; slug: string; valor: number };
 }) {
-  const handleCompartir = () => {
+  // "Link copiado" en el mismo botón (antes era un toast: el Toaster sumaba
+  // ~9 KB de JS a todas las páginas sólo para este aviso).
+  const [copiado, setCopiado] = useState(false);
+  useEffect(() => {
+    if (!copiado) return;
+    const t = setTimeout(() => setCopiado(false), 2000);
+    return () => clearTimeout(t);
+  }, [copiado]);
+
+  const handleCompartir = async () => {
     track("compartir", { auto_id: trackAuto.auto_id, slug: trackAuto.slug });
-    void compartir(titulo);
+    if (await compartir(titulo)) setCopiado(true);
   };
   const datosTrack = {
     "data-track-auto-id": trackAuto.auto_id,
@@ -62,11 +76,17 @@ export function WhatsappCta({
         </a>
         <button
           type="button"
-          onClick={handleCompartir}
-          aria-label="Compartir"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-muted"
+          onClick={() => void handleCompartir()}
+          aria-label={copiado ? "Link copiado" : "Compartir"}
+          className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-muted"
         >
-          <Share2 className="h-5 w-5" />
+          {copiado ? <Check className="h-5 w-5 text-emerald-600" /> : <Share2 className="h-5 w-5" />}
+          <span
+            role="status"
+            className={`pointer-events-none absolute -top-9 right-0 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background ${copiado ? "" : "hidden"}`}
+          >
+            {copiado ? "Link copiado" : ""}
+          </span>
         </button>
       </div>
 

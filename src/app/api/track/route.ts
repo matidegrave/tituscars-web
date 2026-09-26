@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const tipo = c.tipo as TipoEvento;
     if (!TIPOS.includes(tipo)) return new Response(null, { status: 204 });
 
-    after(() => Promise.allSettled([guardarEvento(tipo, c), enviarAMeta(tipo, c, request)]));
+    after(() => Promise.allSettled([guardarEvento(tipo, c, request), enviarAMeta(tipo, c, request)]));
   } catch {
     // cuerpo inválido: se ignora
   }

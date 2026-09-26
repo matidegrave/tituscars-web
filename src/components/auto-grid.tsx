@@ -4,9 +4,12 @@ import type { AutoCatalogo } from "@/lib/types";
 export function AutoGrid({
   autos,
   mensajeVacio = "No encontramos autos con esos filtros.",
+  prioridadPrimera = false,
 }: {
   autos: AutoCatalogo[];
   mensajeVacio?: string;
+  /** La primera card es la foto LCP de la página (listado /autos). */
+  prioridadPrimera?: boolean;
 }) {
   if (autos.length === 0) {
     return (
@@ -18,8 +21,8 @@ export function AutoGrid({
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {autos.map((auto) => (
-        <AutoCard key={auto.id} auto={auto} />
+      {autos.map((auto, i) => (
+        <AutoCard key={auto.id} auto={auto} prioridad={prioridadPrimera && i === 0} />
       ))}
     </div>
   );

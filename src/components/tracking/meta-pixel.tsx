@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { PIXEL_ID, pageView, track, type DatosEvento } from "@/lib/tracking";
+import { cargarPixel, pageView, track, type DatosEvento } from "@/lib/tracking";
 
 /** Datos del auto que llevan los links de WhatsApp de la ficha (data-track-*). */
 function datosDelLink(link: HTMLAnchorElement): DatosEvento {
@@ -16,8 +16,9 @@ function datosDelLink(link: HTMLAnchorElement): DatosEvento {
 
 /**
  * Medición global, montado una vez en el layout:
- * - PageView del Pixel en cada navegación del App Router (el snippet oficial
- *   del <head> ya carga el Pixel y manda el PageView de la carga);
+ * - descarga la librería del Pixel al hidratar (afterInteractive; la cola y el
+ *   PageView de la carga ya los registró el snippet del <head>);
+ * - PageView del Pixel en cada navegación del App Router;
  * - cualquier click a WhatsApp (wa.me) de toda la web es click_whatsapp/Lead,
  *   y un tel: es click_llamar. El link NO se toca: sigue siendo un <a href>
  *   que abre al instante; el evento sale por sendBeacon en el mismo click.
@@ -25,6 +26,10 @@ function datosDelLink(link: HTMLAnchorElement): DatosEvento {
 export function MetaPixel() {
   const pathname = usePathname();
   const primeraCarga = useRef(true);
+
+  useEffect(() => {
+    cargarPixel();
+  }, []);
 
   useEffect(() => {
     if (primeraCarga.current) {
@@ -53,20 +58,5 @@ export function MetaPixel() {
     return () => document.removeEventListener("click", alClick, true);
   }, []);
 
-  if (!PIXEL_ID) return null;
-
-  return (
-    <>
-      <noscript>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          height="1"
-          width="1"
-          style={{ display: "none" }}
-          alt=""
-          src={`https://www.facebook.com/tr?id=${PIXEL_ID}&ev=PageView&noscript=1`}
-        />
-      </noscript>
-    </>
-  );
+  return null;
 }

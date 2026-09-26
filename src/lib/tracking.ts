@@ -41,6 +41,8 @@ export const EVENTO_META: Partial<Record<TipoEvento, string>> = {
 };
 
 export const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
+/** El Pixel sólo se inicializa en este host (ver lib/entorno.ts). */
+const HOST_PIXEL = "tituscars.com";
 
 type Fbq = ((...args: unknown[]) => void) & {
   callMethod?: (...args: unknown[]) => void;
@@ -57,13 +59,27 @@ declare global {
 }
 
 /**
- * Código base OFICIAL de Meta, tal cual (crea window.fbq, carga fbevents.js,
- * init y el PageView de la carga). Va como <script> en el <head> del layout,
- * así window.fbq existe antes de la hidratación y ningún evento que se
- * dispare al entrar (ViewContent) se pierde.
+ * Código base de Meta con una sola diferencia: la cola window.fbq, el init y el
+ * PageView se registran YA (en el <head>, antes de la hidratación: ningún
+ * evento se pierde), pero la librería fbevents.js se descarga recién cuando la
+ * página es interactiva (como strategy="afterInteractive": la pide
+ * <MetaPixel /> al hidratar, vía window.__cargarPixel), así no compite con la
+ * foto principal. Si el JS de la página no llegara a correr, se descarga igual
+ * en el load. ES5, igual que el original.
+ * Sólo corre en tituscars.com: en localhost o en un preview de vercel.app no
+ * se crea window.fbq y track() no le manda nada a Meta.
  */
 export const SNIPPET_PIXEL = (id: string) =>
-  `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${id}');fbq('track','PageView');`;
+  `if(location.hostname==='${HOST_PIXEL}'){!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];var c=!1;f.__cargarPixel=function(){if(c)return;c=!0;var t=b.createElement(e);t.async=!0;t.src=v;var s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)};f.addEventListener('load',function(){setTimeout(f.__cargarPixel,0)})}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${id}');fbq('track','PageView')}`;
+
+/** Descarga fbevents.js (una sola vez). La llama <MetaPixel /> al hidratar. */
+export function cargarPixel() {
+  try {
+    (window as Window & { __cargarPixel?: () => void }).__cargarPixel?.();
+  } catch {
+    // nunca rompe la página
+  }
+}
 
 /** El fbq del snippet oficial (sin stub propio). null si no hay Pixel. */
 function fbq(): Fbq | null {

@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -16,7 +15,7 @@ import { formatMiles, parseMiles } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { filtrosAParams, ORDEN_DEFECTO, PRECIO_PRESETS, toggleEnArray, type Filtros } from "@/lib/filtros";
 import { modelosParaMarcas, type FacetMarca } from "@/lib/facets";
-import { track } from "@/lib/tracking";
+import { BuscadorCatalogo } from "@/components/catalogo/buscador-catalogo";
 
 const COMBUSTIBLES = ["Nafta", "Diesel", "GNC", "Híbrido"];
 const TRANSMISIONES: { value: string; label: string }[] = [
@@ -32,54 +31,6 @@ const CARROCERIAS: { value: string; label: string }[] = [
 ];
 const KM_OPCIONES = [50000, 100000, 150000, 200000];
 const TODOS = "__todos__";
-
-export function BusquedaInput({
-  id = "filtro-busqueda",
-  valorInicial,
-  onBuscar,
-  placeholder = "Marca, modelo o versión",
-  sinLabel = false,
-  inputClassName = "h-9",
-}: {
-  id?: string;
-  valorInicial: string;
-  onBuscar: (valor: string) => void;
-  placeholder?: string;
-  /** Sin el "Buscar" arriba (queda solo para lectores de pantalla). */
-  sinLabel?: boolean;
-  inputClassName?: string;
-}) {
-  const [busqueda, setBusqueda] = useState(valorInicial);
-
-  useEffect(() => {
-    if (busqueda === valorInicial) return;
-    const timeout = setTimeout(() => {
-      onBuscar(busqueda);
-      const q = busqueda.trim();
-      if (q.length >= 2) track("busqueda", { q });
-    }, 300);
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busqueda]);
-
-  return (
-    <div>
-      <Label htmlFor={id} className={sinLabel ? "sr-only" : "mb-1.5 text-xs text-muted-foreground"}>
-        Buscar
-      </Label>
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          id={id}
-          placeholder={placeholder}
-          className={cn("pl-8", inputClassName)}
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-      </div>
-    </div>
-  );
-}
 
 /** Opción con tilde: toda la fila es tocable y alta para el dedo. */
 function OpcionTilde({
@@ -208,11 +159,7 @@ export function FiltrosPanel({
     <div className="flex min-h-0 flex-1 flex-col text-sm">
       {!onCambiar && (
         <div className="shrink-0 pb-4">
-          <BusquedaInput
-            key={filtros.q ?? ""}
-            valorInicial={filtros.q ?? ""}
-            onBuscar={(valor) => ir({ ...filtros, q: valor || undefined })}
-          />
+          <BuscadorCatalogo filtros={filtros} id="filtro-busqueda" />
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden border-t border-border pr-1">

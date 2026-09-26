@@ -14,7 +14,7 @@ import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdAuto } from "@/lib/json-ld";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
-import { BusquedaAMedida } from "@/components/busqueda-a-medida";
+import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
 import { linkWhatsapp, mensajeConsultaAuto } from "@/lib/whatsapp";
 
@@ -201,7 +201,7 @@ export default async function FichaAutoPage({
         <Confianza />
       </div>
 
-      <BusquedaAMedida autoSlug={auto.slug} autoTitulo={`${titulo} ${auto.anio}`} className="mt-12" />
+      <BusquedaAMedidaDiferida autoSlug={auto.slug} autoTitulo={`${titulo} ${auto.anio}`} className="mt-12" />
     </div>
   );
 }

@@ -30,13 +30,29 @@ export function FichaGallery({
   // Carrusel de la foto principal (swipe): su foto visible es la activa.
   const [apiFoto, setApiFoto] = useState<CarouselApi>();
   const visor = useRef<VisorAbierto | null>(null);
+  // Las fotos 2..n del carrusel no van en el primer render: si no, se
+  // descargan junto con la primera (la foto LCP) y le sacan ancho de banda.
+  // Se montan después del load de la página, o antes si el usuario desliza.
+  const [montarResto, setMontarResto] = useState(false);
+  useEffect(() => {
+    const montar = () => setMontarResto(true);
+    if (document.readyState === "complete") {
+      const t = setTimeout(montar, 0);
+      return () => clearTimeout(t);
+    }
+    window.addEventListener("load", montar, { once: true });
+    return () => window.removeEventListener("load", montar);
+  }, []);
 
   useEffect(() => {
     if (!apiFoto) return;
     const onSelect = () => setActivo(apiFoto.selectedScrollSnap());
+    const onArrastre = () => setMontarResto(true);
     apiFoto.on("select", onSelect);
+    apiFoto.on("pointerDown", onArrastre);
     return () => {
       apiFoto.off("select", onSelect);
+      apiFoto.off("pointerDown", onArrastre);
     };
   }, [apiFoto]);
 
@@ -88,19 +104,22 @@ export function FichaGallery({
                   aria-label={`Ver foto ${i + 1} de ${ordenadas.length} en grande`}
                   className="relative block aspect-[4/3] w-full"
                 >
-                  {/* La primera va con prioridad alta (en Next 16 `priority` está
-                      deprecado: se usa loading + fetchPriority); la anterior y la siguiente
-                      a la actual se piden ya (eager) para que el swipe sea
-                      instantáneo; el resto, lazy. */}
-                  <Image
-                    src={foto.url}
-                    alt={alt}
-                    fill
-                    sizes="(min-width: 1024px) 60vw, 100vw"
-                    className="object-cover"
-                    loading={i === 0 || Math.abs(i - activo) <= 1 ? "eager" : "lazy"}
-                    fetchPriority={i === 0 ? "high" : undefined}
-                  />
+                  {/* La primera es la foto LCP: va en el HTML, eager y con prioridad
+                      alta (en Next 16 `priority` está deprecado: se usa loading +
+                      fetchPriority). Las demás se montan después del load; ahí la
+                      anterior y la siguiente a la actual van eager para que el
+                      swipe sea instantáneo, y el resto lazy. */}
+                  {(i === 0 || montarResto) && (
+                    <Image
+                      src={foto.url}
+                      alt={alt}
+                      fill
+                      sizes="(min-width: 1024px) 60vw, 100vw"
+                      className="object-cover"
+                      loading={i === 0 || Math.abs(i - activo) <= 1 ? "eager" : "lazy"}
+                      fetchPriority={i === 0 ? "high" : undefined}
+                    />
+                  )}
                 </button>
               </CarouselItem>
             ))}
@@ -151,6 +170,7 @@ export function FichaGallery({
                 sizes="80px"
                 quality={50}
                 loading={i < 5 ? "eager" : "lazy"}
+                fetchPriority="low"
                 className="object-cover"
               />
             </button>

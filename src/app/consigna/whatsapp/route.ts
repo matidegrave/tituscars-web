@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       categoria: "consignacion",
     };
     after(() =>
-      Promise.allSettled([guardarEvento("lead_form", evento), enviarAMeta("lead_form", evento, request)])
+      Promise.allSettled([guardarEvento("lead_form", evento, request), enviarAMeta("lead_form", evento, request)])
     );
   }
 

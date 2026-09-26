@@ -6,7 +6,7 @@ import { AutoGrid } from "@/components/auto-grid";
 import { cargarMasAutos } from "@/app/autos/acciones";
 import type { Filtros } from "@/lib/filtros";
 import type { AutoCatalogo } from "@/lib/types";
-import { BusquedaAMedida } from "@/components/busqueda-a-medida";
+import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 
 const PREFIJO = "titus:catalogo:";
 const VIGENCIA_MS = 30 * 60 * 1000;
@@ -143,7 +143,7 @@ export function CatalogoInfinito({
   return (
     <>
       <div onClickCapture={guardar}>
-        <AutoGrid autos={autos} />
+        <AutoGrid autos={autos} prioridadPrimera />
       </div>
 
       <div ref={sentinela} className="mt-8 flex min-h-10 items-center justify-center">
@@ -170,7 +170,7 @@ export function CatalogoInfinito({
       </div>
 
       {/* Fin del scroll infinito: si no apareció lo que buscaba, lo pide a medida. */}
-      {!hayMas && <BusquedaAMedida sobreGris className="mx-auto mt-10 max-w-3xl" />}
+      {!hayMas && <BusquedaAMedidaDiferida sobreGris className="mx-auto mt-10 max-w-3xl" />}
     </>
   );
 }

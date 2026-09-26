@@ -44,9 +44,16 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
   },
   images: {
+    // AVIF primero (el navegador que no lo acepta recibe WebP). Next escala
+    // la calidad para AVIF (q * 50/80: q75 -> AVIF 47) de modo que se vea
+    // como el WebP de la misma q: las fotos quedan en q75 (la de siempre) y
+    // pesan ~45% menos. Bajar la q a 50 en AVIF ya se nota (ripio, patentes).
+    formats: ["image/avif", "image/webp"],
     // Next 16 solo acepta las calidades de esta lista (por defecto [75]); una
-    // que no esté se sirve con la más cercana. 50 es para las miniaturas.
+    // que no esté se sirve con la más cercana.
     qualities: [50, 75],
+    // 160: miniaturas de 80 px en pantallas 2x (sin esto pedían 256).
+    imageSizes: [16, 32, 48, 64, 96, 128, 160, 256, 384],
     remotePatterns: [
       {
         protocol: "https",

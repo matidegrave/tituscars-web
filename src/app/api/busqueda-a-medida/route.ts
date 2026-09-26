@@ -1,8 +1,10 @@
+import { esProduccionReal, simular } from "@/lib/entorno";
 import { supabaseServidor } from "@/lib/supabase-servidor";
 import { demasiadas, dentroDelLimite, ipDe } from "@/lib/rate-limit";
 
 // Formulario "Te buscamos tu auto a medida": valida en el servidor y guarda
-// en busquedas_web. Rate limit: 3 envíos cada 10 minutos por IP.
+// en busquedas_web. Rate limit: 3 envíos cada 10 minutos por IP. Fuera de
+// producción real (lib/entorno.ts) no guarda: loguea y responde ok.
 
 const MAXIMO_BYTES = 8 * 1024;
 
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
   }
 
   const entrega = c.entrega_vehiculo === true;
-  const { error } = await supabaseServidor.from("busquedas_web").insert({
+  const fila = {
     nombre,
     celular,
     modelos_buscados: modelos,
@@ -89,7 +91,13 @@ export async function POST(request: Request) {
     observaciones,
     pagina,
     auto_slug: autoSlug,
-  });
+  };
+  if (!esProduccionReal(request)) {
+    // Sin nombre ni celular en el log.
+    simular("busquedas_web", { ...fila, nombre: "[oculto]", celular: "[oculto]" }, request);
+    return ok();
+  }
+  const { error } = await supabaseServidor.from("busquedas_web").insert(fila);
   if (error) {
     console.error("[BUSQUEDA] busquedas_web", error.message);
     return Response.json({ error: "No se pudo guardar" }, { status: 500 });

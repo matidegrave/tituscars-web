@@ -6,7 +6,7 @@ import { FiltrosActivos } from "@/components/catalogo/filtros-activos";
 import { CondicionTabs } from "@/components/catalogo/condicion-tabs";
 import { OrdenSelect } from "@/components/catalogo/orden-select";
 import { CatalogoInfinito } from "@/components/catalogo/catalogo-infinito";
-import { BuscadorCelu } from "@/components/catalogo/buscador-celu";
+import { BuscadorCatalogo, ID_RESULTADOS } from "@/components/catalogo/buscador-catalogo";
 import { EstadoVacio } from "@/components/catalogo/estado-vacio";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
 import { JsonLd } from "@/components/json-ld";
@@ -74,7 +74,7 @@ export default async function CatalogoPage({
 
             {/* Celu: buscador a todo el ancho y, debajo, Filtros y orden mitad y mitad. */}
             <div className="mt-5 lg:hidden">
-              <BuscadorCelu filtros={filtros} />
+              <BuscadorCatalogo filtros={filtros} id="filtro-busqueda-celu" />
             </div>
             <div className="mb-5 mt-3 grid grid-cols-2 gap-2 lg:hidden">
               <FiltrosDrawer
@@ -90,7 +90,8 @@ export default async function CatalogoPage({
               />
             </div>
 
-            <div className="mt-4">
+            {/* Destino del scroll al buscar (debajo del header fijo). */}
+            <div id={ID_RESULTADOS} className="mt-4 scroll-mt-[calc(var(--header-h)+1rem)]">
               <FiltrosActivos filtros={filtros} />
             </div>
 

@@ -1,9 +1,11 @@
+import { esProduccionReal, simular } from "@/lib/entorno";
 import { supabaseServidor } from "@/lib/supabase-servidor";
 import { EVENTO_META, type TipoEvento } from "@/lib/tracking";
 
 // Registro de un evento en el servidor: fila en web_eventos y, si hay
 // META_CAPI_TOKEN, el mismo evento por la Conversions API de Meta con el
-// event_id del Pixel (Meta deduplica). Lo usan /api/track (eventos del
+// event_id del Pixel (Meta deduplica). SÓLO en producción real
+// (lib/entorno.ts): en local y en previews se loguea y no se escribe nada. Lo usan /api/track (eventos del
 // navegador) y las rutas que funcionan sin JS (ej. /consigna/whatsapp).
 //
 // Datos personales: hoy no viaja ninguno. Si algún día se manda teléfono o
@@ -26,9 +28,9 @@ function leerCookie(header: string | null, nombre: string): string | undefined {
   return m ? decodeURIComponent(m[1]) : undefined;
 }
 
-export async function guardarEvento(tipo: TipoEvento, c: Cuerpo) {
+export async function guardarEvento(tipo: TipoEvento, c: Cuerpo, request: Request) {
   const autoId = texto(c.auto_id, 36);
-  const { error } = await supabaseServidor.from("web_eventos").insert({
+  const fila = {
     tipo,
     auto_id: autoId && UUID.test(autoId) ? autoId : null,
     slug: texto(c.slug, 200),
@@ -42,7 +44,9 @@ export async function guardarEvento(tipo: TipoEvento, c: Cuerpo) {
     con_gclid: Boolean(texto(c.gclid, 500)),
     referrer: texto(c.referrer, 300),
     dispositivo: texto(c.dispositivo, 20),
-  });
+  };
+  if (!esProduccionReal(request)) return simular("web_eventos", fila, request);
+  const { error } = await supabaseServidor.from("web_eventos").insert(fila);
   if (error) console.error("[TRACK] web_eventos", error.message);
 }
 
@@ -51,7 +55,11 @@ export async function enviarAMeta(tipo: TipoEvento, c: Cuerpo, request: Request)
   const dataset = process.env.NEXT_PUBLIC_META_PIXEL_ID;
   const nombre = EVENTO_META[tipo];
   const eventId = texto(c.event_id, 64);
-  if (!token || !dataset || !nombre || !eventId) return;
+  if (!nombre) return;
+  if (!esProduccionReal(request)) {
+    return simular(`CAPI ${nombre}`, { event_id: eventId, categoria: c.categoria ?? null }, request);
+  }
+  if (!token || !dataset || !eventId) return;
 
   const cookies = request.headers.get("cookie");
   const fbclid = texto(c.fbclid, 500);
