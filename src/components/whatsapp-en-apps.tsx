@@ -109,18 +109,6 @@ export function WhatsappEnApps() {
     }
   }
 
-  // x-safari-https:// abre la página en Safari en algunas webviews de iOS 17+;
-  // si no hace nada, no se muestra ningún error.
-  function probarSafari() {
-    const esquema = window.location.protocol === "http:" ? "x-safari-http" : "x-safari-https";
-    try {
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- es un esquema de iOS (x-safari-https), no una página de la web
-      window.location.href = `${esquema}://${window.location.host}${window.location.pathname}${window.location.search}`;
-    } catch {
-      // nada
-    }
-  }
-
   const cerrar = (
     <button
       type="button"
@@ -154,13 +142,6 @@ export function WhatsappEnApps() {
           className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-[#25D366] px-4 py-3 text-center text-base font-semibold text-white"
         >
           {copiado ? "Copiado. Abrí WhatsApp y pegalo" : "Copiar número y mensaje"}
-        </button>
-        <button
-          type="button"
-          onClick={probarSafari}
-          className="mt-3 flex h-11 w-full items-center justify-center rounded-xl border border-border text-sm font-semibold text-foreground"
-        >
-          Probar abrir en Safari
         </button>
       </div>
     );
