@@ -25,19 +25,37 @@ import { TrackAlMontar } from "@/components/tracking/track-al-montar";
 
 export const metadata: Metadata = {
   title: { absolute: "Titus Cars · Links" },
-  description: "WhatsApp, catálogo y redes de Titus Cars, autos usados en Córdoba.",
+  description:
+    "WhatsApp, catálogo y redes de Titus Cars, autos usados en Córdoba.",
   robots: { index: false, follow: true },
 };
 
-const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+const UTM = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+];
 
-type Estilo = "naranja" | "verde" | "blanco";
+type Estilo = "naranja" | "verde";
 
 const ESTILOS: Record<Estilo, string> = {
   naranja: "bg-brand text-white hover:bg-brand-dark",
   verde: "bg-[#25D366] text-white hover:bg-[#1ebe5a]",
-  blanco: "border border-zinc-200 bg-white text-foreground hover:bg-zinc-50",
 };
+
+/**
+ * Logo a color dentro de un círculo blanco (mismo tamaño que el isologo de
+ * "Ver catálogo"), así se lee sobre el naranja.
+ */
+function EnCirculo({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white">
+      {children}
+    </span>
+  );
+}
 
 interface Boton {
   texto: string;
@@ -64,44 +82,72 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
     return `${ruta}${ruta.includes("?") ? "&" : "?"}${utm.toString()}`;
   };
 
-  const icono = "h-6 w-6";
+  const icono = "h-7 w-7";
+  const logo = "h-[18px] w-[18px]";
   const botones: Boton[] = [
-    { texto: "Ver catálogo", href: interno("/autos"), estilo: "naranja", icono: <TitusIsologo className={icono} /> },
+    {
+      texto: "Ver catálogo",
+      href: interno("/autos"),
+      estilo: "naranja",
+      icono: <TitusIsologo className={icono} />,
+    },
     {
       texto: "Quiero comprar un auto",
       href: linkWhatsapp("Hola! Quiero comprar un auto."),
       estilo: "verde",
-      icono: <WhatsappIcon className={icono} />,
+      icono: <WhatsappIcon className="h-6 w-6" />,
       externo: true,
     },
     {
       texto: "Quiero vender / consignar mi auto",
       href: linkWhatsapp("Hola! Quiero vender mi auto.", WHATSAPP_CONSIGNAS),
       estilo: "verde",
-      icono: <WhatsappIcon className={icono} />,
+      icono: <WhatsappIcon className="h-6 w-6" />,
       externo: true,
     },
-    { texto: "Ubicación", href: MAPS_COMO_LLEGAR, estilo: "blanco", icono: <GoogleMapsIcon className={icono} />, externo: true },
+    {
+      texto: "Ubicación",
+      href: MAPS_COMO_LLEGAR,
+      estilo: "naranja",
+      icono: (
+        <EnCirculo>
+          <GoogleMapsIcon className={logo} />
+        </EnCirculo>
+      ),
+      externo: true,
+    },
     {
       texto: "Reseñas",
       href: RESENAS_URL,
-      estilo: "blanco",
-      icono: <GoogleMapsIcon className={icono} />,
+      estilo: "naranja",
+      icono: (
+        <EnCirculo>
+          <GoogleMapsIcon className={logo} />
+        </EnCirculo>
+      ),
       externo: true,
       extra: `${GOOGLE_PUNTAJE} ★`,
     },
     {
       texto: "Conocenos en Instagram",
       href: INSTAGRAM_URL,
-      estilo: "blanco",
-      icono: <InstagramColorIcon className={icono} />,
+      estilo: "naranja",
+      icono: (
+        <EnCirculo>
+          <InstagramColorIcon className={logo} />
+        </EnCirculo>
+      ),
       externo: true,
     },
     {
       texto: "Conocenos en TikTok",
       href: TIKTOK_URL,
-      estilo: "blanco",
-      icono: <TikTokColorIcon className={icono} />,
+      estilo: "naranja",
+      icono: (
+        <EnCirculo>
+          <TikTokColorIcon className={logo} />
+        </EnCirculo>
+      ),
       externo: true,
     },
   ];
@@ -124,19 +170,26 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
           </h1>
         </header>
 
-        <nav aria-label="Links de Titus Cars" className="mt-8 flex flex-col gap-3">
+        <nav
+          aria-label="Links de Titus Cars"
+          className="mt-8 flex flex-col gap-3"
+        >
           {botones.map((b) => (
             <a
               key={b.texto}
               href={b.href}
-              {...(b.externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              {...(b.externo
+                ? { target: "_blank", rel: "noopener noreferrer" }
+                : {})}
               className={`relative flex min-h-14 w-full items-center justify-center rounded-xl px-11 py-3 text-center text-[15px] font-semibold sm:px-14 sm:text-base shadow-sm transition-colors ${ESTILOS[b.estilo]}`}
             >
               {/* Ícono a la izquierda y texto centrado en todo el ancho. */}
-              <span className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center">{b.icono}</span>
+              <span className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center">
+                {b.icono}
+              </span>
               {b.texto}
               {b.extra && (
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-foreground/70">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-white">
                   {b.extra}
                 </span>
               )}
@@ -144,7 +197,9 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
           ))}
         </nav>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">{DIRECCION}</p>
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          {DIRECCION}
+        </p>
       </div>
     </div>
   );
