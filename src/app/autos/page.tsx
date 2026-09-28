@@ -5,8 +5,12 @@ import { FiltrosDrawer } from "@/components/catalogo/filtros-drawer";
 import { FiltrosActivos } from "@/components/catalogo/filtros-activos";
 import { CondicionTabs } from "@/components/catalogo/condicion-tabs";
 import { OrdenSelect } from "@/components/catalogo/orden-select";
+import { BarraCatalogoCelu } from "@/components/catalogo/barra-catalogo-celu";
 import { CatalogoInfinito } from "@/components/catalogo/catalogo-infinito";
-import { BuscadorCatalogo, ID_RESULTADOS } from "@/components/catalogo/buscador-catalogo";
+import {
+  BuscadorCatalogo,
+  ID_RESULTADOS,
+} from "@/components/catalogo/buscador-catalogo";
 import { EstadoVacio } from "@/components/catalogo/estado-vacio";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
 import { JsonLd } from "@/components/json-ld";
@@ -72,23 +76,29 @@ export default async function CatalogoPage({
               </div>
             </div>
 
-            {/* Celu: buscador a todo el ancho y, debajo, Filtros y orden mitad y mitad. */}
-            <div className="mt-5 lg:hidden">
+            {/* Celu: buscador a todo el ancho y, debajo, Filtros y orden mitad y
+                mitad. Barra sticky que se esconde al bajar y vuelve al subir. */}
+            {/* Hija directa de la columna del listado: sticky necesita que su
+                contenedor sea el que tiene toda la lista. */}
+            <BarraCatalogoCelu className="mt-2">
               <BuscadorCatalogo filtros={filtros} id="filtro-busqueda-celu" />
-            </div>
-            <div className="mb-5 mt-3 grid grid-cols-2 gap-2 lg:hidden">
-              <FiltrosDrawer
-                filtros={filtros}
-                marcas={marcas}
-                anios={anios}
-                hayTransmision={hayTransmision}
-                hayCarroceria={hayCarroceria}
-              />
-              <OrdenSelect filtros={filtros} className="bg-background" />
-            </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <FiltrosDrawer
+                  filtros={filtros}
+                  marcas={marcas}
+                  anios={anios}
+                  hayTransmision={hayTransmision}
+                  hayCarroceria={hayCarroceria}
+                />
+                <OrdenSelect filtros={filtros} className="bg-background" />
+              </div>
+            </BarraCatalogoCelu>
 
             {/* Destino del scroll al buscar (debajo del header fijo). */}
-            <div id={ID_RESULTADOS} className="mt-4 scroll-mt-[calc(var(--header-h)+1rem)]">
+            <div
+              id={ID_RESULTADOS}
+              className="mt-4 scroll-mt-[calc(var(--header-h)+1rem)]"
+            >
               <FiltrosActivos filtros={filtros} />
             </div>
 
