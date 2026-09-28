@@ -65,6 +65,11 @@ interface Boton {
   externo?: boolean;
   /** Algo chico a la derecha (ej. el puntaje). */
   extra?: string;
+  /**
+   * Aclaración que sigue al texto en la misma línea si entra; si el botón es
+   * angosto, va debajo y más chica (container query sobre el botón).
+   */
+  subtexto?: string;
 }
 
 export default async function LinksPage({ searchParams }: PageProps<"/links">) {
@@ -87,6 +92,7 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
   const botones: Boton[] = [
     {
       texto: "Ver catálogo",
+      subtexto: "(vehículos disponibles)",
       href: interno("/autos"),
       estilo: "naranja",
       icono: <TitusIsologo className={icono} />,
@@ -181,13 +187,27 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
               {...(b.externo
                 ? { target: "_blank", rel: "noopener noreferrer" }
                 : {})}
-              className={`relative flex min-h-14 w-full items-center justify-center rounded-xl px-11 py-3 text-center text-[15px] font-semibold sm:px-14 sm:text-base shadow-sm transition-colors ${ESTILOS[b.estilo]}`}
+              className={`@container relative flex min-h-14 w-full items-center justify-center rounded-xl px-11 py-3 text-center text-[15px] font-semibold sm:px-14 sm:text-base shadow-sm transition-colors ${ESTILOS[b.estilo]}`}
             >
               {/* Ícono a la izquierda y texto centrado en todo el ancho. */}
               <span className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center">
                 {b.icono}
               </span>
-              {b.texto}
+              {b.subtexto ? (
+                // Una línea si entra con aire (276 px de contenido: lo que mide
+                // "Ver catálogo (vehículos disponibles)" a 15 px + 8 px por lado para
+                // no quedar pegado al ícono);
+                // si no, la aclaración abajo y más chica. Cada parte es
+                // nowrap: nunca se corta una palabra ni se sale del botón.
+                <span className="flex flex-col items-center leading-tight @min-[276px]:flex-row @min-[276px]:gap-x-[0.3em]">
+                  <span className="whitespace-nowrap">{b.texto}</span>{" "}
+                  <span className="whitespace-nowrap text-xs font-medium @min-[276px]:text-[1em] @min-[276px]:font-semibold">
+                    {b.subtexto}
+                  </span>
+                </span>
+              ) : (
+                b.texto
+              )}
               {b.extra && (
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-white">
                   {b.extra}
