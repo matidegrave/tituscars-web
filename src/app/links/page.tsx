@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Image from "next/image";
 import {
   DIRECCION,
@@ -18,6 +19,7 @@ import {
   TitusIsologo,
 } from "@/components/icons/marcas";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
+import { navegadorDeApp } from "@/lib/whatsapp-apps";
 
 // /links: la página de la bio de Instagram y TikTok (reemplaza al Linktree).
 // Sin el marco del sitio (layout: OcultarEn), links <a> puros (anda sin JS) y
@@ -74,6 +76,9 @@ interface Boton {
 
 export default async function LinksPage({ searchParams }: PageProps<"/links">) {
   const sp = await searchParams;
+  // Dentro de TikTok (no deja abrir WhatsApp) se avisa arriba desde el HTML
+  // del servidor, sin que la página salte al cargar.
+  const enTikTok = navegadorDeApp((await headers()).get("user-agent") ?? "") === "tiktok";
 
   // Los links internos conservan los utm_* con que se llegó (?utm_source=instagram
   // o tiktok), así la visita al catálogo sigue atribuida a la red.
@@ -160,6 +165,14 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
 
   return (
     <div className="flex min-h-dvh flex-col items-center bg-brand-light px-4 pb-10 pt-10">
+      {enTikTok && (
+        <p
+          role="note"
+          className="-mx-4 -mt-10 mb-6 w-[calc(100%+2rem)] bg-zinc-900 px-4 py-2 text-center text-xs font-medium text-white"
+        >
+          Estás en el navegador de TikTok. Para escribirnos por WhatsApp: ⋯ → Abrir en el navegador.
+        </p>
+      )}
       <TrackAlMontar tipo="vista_catalogo" />
       <div className="w-full max-w-md">
         <header className="flex flex-col items-center text-center">

@@ -1,33 +1,39 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ArrowUpRight, MoreHorizontal, X } from "lucide-react";
 import { telefonoLegible } from "@/lib/config";
 import {
   EVENTO_WHATSAPP_APP,
   datosWhatsapp,
   esquemaWhatsapp,
   navegadorDeApp,
+  type NavegadorDeApp,
 } from "@/lib/whatsapp-apps";
 
 const ESPERA_MS = 1500;
 
+type Panel = { url: string; numero: string; texto: string; app: NavegadorDeApp };
+
 /**
  * Montado una vez en el layout. Sólo actúa en el navegador interno de TikTok,
- * Instagram o Facebook (ver lib/whatsapp-apps.ts): cualquier link a WhatsApp
- * del sitio (fichas, /links, /consigna, flotante, header) y los formularios
- * intentan whatsapp://send; si a los 1,5 s la página sigue visible (la app no
- * se abrió), aparece un panel abajo con cómo salir al navegador, "Copiar
- * número" y el link wa.me de siempre. El click igual se mide (click_whatsapp),
- * lo registra el listener de MetaPixel.
+ * Instagram o Facebook (ver lib/whatsapp-apps.ts); en cualquier otro
+ * navegador no hace nada. Cubre todos los links a WhatsApp del sitio (fichas,
+ * /links, /consigna, flotante, header) y los formularios.
+ * - TikTok bloquea todo salto a WhatsApp (wa.me y whatsapp://, con el toast
+ *   "La acción no se pudo completar"): no se intenta; el panel sale al toque.
+ * - Instagram / Facebook: se intenta whatsapp://send y, si a los 1,5 s la
+ *   página sigue visible, sale el panel.
+ * El toque se mide igual como un click_whatsapp (listener de MetaPixel).
  */
 export function WhatsappEnApps() {
-  const [panel, setPanel] = useState<{ url: string; numero: string } | null>(null);
+  const [panel, setPanel] = useState<Panel | null>(null);
   const [copiado, setCopiado] = useState(false);
   const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!navegadorDeApp()) return;
+    const app = navegadorDeApp();
+    if (!app) return;
 
     const intentar = (url: string) => {
       const esquema = esquemaWhatsapp(url);
@@ -37,11 +43,16 @@ export function WhatsappEnApps() {
         return;
       }
       if (espera.current) clearTimeout(espera.current);
-      setPanel(null);
       setCopiado(false);
+      const nuevo: Panel = { url, numero: datos.numero, texto: datos.texto, app };
+      if (app === "tiktok") {
+        setPanel(nuevo);
+        return;
+      }
+      setPanel(null);
       window.location.href = esquema;
       espera.current = setTimeout(() => {
-        if (document.visibilityState === "visible") setPanel({ url, numero: datos.numero });
+        if (document.visibilityState === "visible") setPanel(nuevo);
       }, ESPERA_MS);
     };
 
@@ -76,16 +87,16 @@ export function WhatsappEnApps() {
   if (!panel) return null;
   const legible = telefonoLegible(panel.numero);
 
-  async function copiar() {
+  async function copiar(contenido: string) {
     try {
-      await navigator.clipboard.writeText(legible);
+      await navigator.clipboard.writeText(contenido);
       setCopiado(true);
       return;
     } catch {
       // Algunos navegadores de apps no dejan usar el portapapeles moderno.
     }
     const campo = document.createElement("textarea");
-    campo.value = legible;
+    campo.value = contenido;
     campo.setAttribute("readonly", "");
     campo.style.position = "fixed";
     campo.style.opacity = "0";
@@ -98,26 +109,76 @@ export function WhatsappEnApps() {
     }
   }
 
+  // x-safari-https:// abre la página en Safari en algunas webviews de iOS 17+;
+  // si no hace nada, no se muestra ningún error.
+  function probarSafari() {
+    const esquema = window.location.protocol === "http:" ? "x-safari-http" : "x-safari-https";
+    try {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- es un esquema de iOS (x-safari-https), no una página de la web
+      window.location.href = `${esquema}://${window.location.host}${window.location.pathname}${window.location.search}`;
+    } catch {
+      // nada
+    }
+  }
+
+  const cerrar = (
+    <button
+      type="button"
+      onClick={() => setPanel(null)}
+      aria-label="Cerrar"
+      className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+    >
+      <X className="h-5 w-5" />
+    </button>
+  );
+
+  if (panel.app === "tiktok") {
+    return (
+      <div
+        role="dialog"
+        aria-label="TikTok no deja abrir WhatsApp desde acá"
+        className="fixed inset-x-0 bottom-0 z-[80] rounded-t-2xl border-t border-border bg-background px-5 pb-7 pt-6 shadow-2xl"
+      >
+        {cerrar}
+        <p className="pr-8 text-lg font-bold leading-snug">TikTok no deja abrir WhatsApp desde acá</p>
+        <div className="mt-4 flex items-center gap-3 rounded-xl bg-muted px-4 py-3">
+          <span className="text-base font-semibold leading-snug">
+            Tocá <MoreHorizontal className="inline h-5 w-5 align-[-4px]" aria-label="⋯" /> arriba a la derecha → Abrir
+            en el navegador
+          </span>
+          <ArrowUpRight className="ml-auto h-8 w-8 shrink-0 text-brand" aria-hidden="true" />
+        </div>
+        <button
+          type="button"
+          onClick={() => void copiar(`${legible}\n${panel.texto}`)}
+          className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl bg-[#25D366] px-4 py-3 text-center text-base font-semibold text-white"
+        >
+          {copiado ? "Copiado. Abrí WhatsApp y pegalo" : "Copiar número y mensaje"}
+        </button>
+        <button
+          type="button"
+          onClick={probarSafari}
+          className="mt-3 flex h-11 w-full items-center justify-center rounded-xl border border-border text-sm font-semibold text-foreground"
+        >
+          Probar abrir en Safari
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       role="dialog"
       aria-label="Cómo escribirnos por WhatsApp"
       className="fixed inset-x-0 bottom-0 z-[80] rounded-t-2xl border-t border-border bg-background px-5 pb-6 pt-5 shadow-2xl"
     >
-      <button
-        type="button"
-        onClick={() => setPanel(null)}
-        aria-label="Cerrar"
-        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
-      >
-        <X className="h-5 w-5" />
-      </button>
+      {cerrar}
       <p className="pr-8 text-base font-semibold">
         Para escribirnos por WhatsApp: tocá ⋯ arriba a la derecha → Abrir en el navegador
       </p>
       <button
         type="button"
-        onClick={() => void copiar()}
+        onClick={() => void copiar(legible)}
         className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[#25D366] text-base font-semibold text-white"
       >
         {copiado ? "¡Número copiado!" : `Copiar número ${legible}`}
