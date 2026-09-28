@@ -1,7 +1,5 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { filtrosAParams, type Filtros } from "@/lib/filtros";
+import Link from "next/link";
+import { urlCatalogo, type Filtros } from "@/lib/filtros";
 import type { Condicion } from "@/lib/types";
 
 const OPCIONES: { value: Condicion | undefined; label: string }[] = [
@@ -10,21 +8,18 @@ const OPCIONES: { value: Condicion | undefined; label: string }[] = [
   { value: "0km", label: "0 KM" },
 ];
 
+/** Todos / Usados / 0 KM: links reales (andan sin JS), armados en el servidor. */
 export function CondicionTabs({ filtros }: { filtros: Filtros }) {
-  const router = useRouter();
-
   return (
     <div className="inline-flex w-fit items-center gap-1 rounded-lg bg-muted p-[3px]">
       {OPCIONES.map((op) => {
         const activo = filtros.condicion === op.value;
         return (
-          <button
+          <Link
             key={op.label}
-            type="button"
-            onClick={() => {
-              const params = filtrosAParams({ ...filtros, condicion: op.value, page: 1 });
-              router.push(`/autos${params.size > 0 ? `?${params.toString()}` : ""}`);
-            }}
+            href={urlCatalogo({ ...filtros, condicion: op.value })}
+            prefetch={false}
+            aria-current={activo ? "page" : undefined}
             className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
               activo
                 ? "bg-background text-foreground shadow-sm"
@@ -32,7 +27,7 @@ export function CondicionTabs({ filtros }: { filtros: Filtros }) {
             }`}
           >
             {op.label}
-          </button>
+          </Link>
         );
       })}
     </div>

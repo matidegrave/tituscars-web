@@ -12,7 +12,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { FiltrosPanel } from "@/components/catalogo/filtros-panel";
-import { contarFiltrosActivos, filtrosAParams, type Filtros } from "@/lib/filtros";
+import { contarFiltrosActivos, urlCatalogo, type Filtros } from "@/lib/filtros";
 import type { FacetMarca } from "@/lib/facets";
 
 export function FiltrosDrawer({
@@ -42,8 +42,7 @@ export function FiltrosDrawer({
   }
 
   function aplicar() {
-    const params = filtrosAParams({ ...borrador, page: 1 });
-    router.push(`/autos${params.size > 0 ? `?${params.toString()}` : ""}`);
+    router.push(urlCatalogo(borrador));
     setAbierto(false);
   }
 

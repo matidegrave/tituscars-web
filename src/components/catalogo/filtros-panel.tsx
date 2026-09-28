@@ -1,21 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatMiles, parseMiles } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { filtrosAParams, ORDEN_DEFECTO, PRECIO_PRESETS, toggleEnArray, type Filtros } from "@/lib/filtros";
+import {
+  camposOcultos,
+  ORDEN_DEFECTO,
+  PRECIO_PRESETS,
+  toggleEnArray,
+  urlCatalogo,
+  type Filtros,
+} from "@/lib/filtros";
 import { modelosParaMarcas, type FacetMarca } from "@/lib/facets";
 import { BuscadorCatalogo } from "@/components/catalogo/buscador-catalogo";
+import {
+  FormFiltro,
+  OpcionBoton,
+  OpcionLink,
+  Seccion,
+  SelectNativo,
+} from "@/components/catalogo/filtro-controles";
 
 const COMBUSTIBLES = ["Nafta", "Diesel", "GNC", "Híbrido"];
 const TRANSMISIONES: { value: string; label: string }[] = [
@@ -30,74 +34,19 @@ const CARROCERIAS: { value: string; label: string }[] = [
   { value: "moto", label: "Moto" },
 ];
 const KM_OPCIONES = [50000, 100000, 150000, 200000];
-const TODOS = "__todos__";
 
-/** Opción con tilde: toda la fila es tocable y alta para el dedo. */
-function OpcionTilde({
-  checked,
-  onToggle,
-  children,
-}: {
-  checked: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:text-brand">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onToggle}
-        className="size-[18px] shrink-0 cursor-pointer accent-brand"
-      />
-      <span>{children}</span>
-    </label>
-  );
-}
+const numeroDe = (datos: FormData, campo: string): number | undefined => {
+  const v = datos.get(campo);
+  return typeof v === "string" ? parseMiles(v) : undefined;
+};
 
 /**
- * Categoría de filtro desplegable (tipo acordeón). Arranca abierta solo si
- * tiene algo elegido, para que el panel se vea corto y ordenado.
+ * Filtros del catálogo (sidebar de la compu y panel del celu). Cada opción es
+ * un link o un form GET armado en el render (filtro-controles.tsx): filtra
+ * aunque el JS no corra o falle. Con JS, en la compu navega sin recargar; en
+ * el celu (onCambiar) junta los cambios en un borrador que se aplica con
+ * "Ver resultados".
  */
-function Seccion({
-  titulo,
-  activos = 0,
-  children,
-}: {
-  titulo: string;
-  activos?: number;
-  children: React.ReactNode;
-}) {
-  const [abierta, setAbierta] = useState(activos > 0);
-
-  return (
-    <div className="border-b border-border">
-      <button
-        type="button"
-        onClick={() => setAbierta((a) => !a)}
-        aria-expanded={abierta}
-        className="flex w-full items-center justify-between gap-2 py-3 text-left transition-colors hover:text-brand"
-      >
-        <span className="flex items-center gap-2 font-semibold">
-          {titulo}
-          {activos > 0 && (
-            <span className="rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-              {activos}
-            </span>
-          )}
-        </span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 text-brand transition-transform",
-            abierta && "rotate-180"
-          )}
-        />
-      </button>
-      {abierta && <div className="pb-4">{children}</div>}
-    </div>
-  );
-}
-
 export function FiltrosPanel({
   filtros,
   marcas,
@@ -124,35 +73,30 @@ export function FiltrosPanel({
       onCambiar(nuevo);
       return;
     }
-    const params = filtrosAParams({ ...nuevo, page: 1 });
-    router.push(`/autos${params.size > 0 ? `?${params.toString()}` : ""}`);
+    router.push(urlCatalogo(nuevo));
   }
+
+  /** Link de una opción: en la compu navega solo; en el celu, al borrador. */
+  const opcion = (nuevo: Filtros) => ({
+    href: urlCatalogo(nuevo),
+    onElegir: onCambiar ? () => onCambiar(nuevo) : undefined,
+  });
 
   // Al filtrar por precio, el que busca por plata quiere ver los autos en
   // orden de precio: si el orden sigue en el de defecto, pasa a menor precio.
-  function irConPrecio(precioMin?: number, precioMax?: number) {
-    const orden =
-      (precioMin || precioMax) && filtros.orden === ORDEN_DEFECTO ? "precio_asc" : filtros.orden;
-    ir({ ...filtros, precioMin, precioMax, orden });
-  }
+  const conPrecio = (precioMin?: number, precioMax?: number): Filtros => ({
+    ...filtros,
+    precioMin,
+    precioMax,
+    orden:
+      (precioMin || precioMax) && filtros.orden === ORDEN_DEFECTO ? "precio_asc" : filtros.orden,
+  });
 
   const presetActivo = PRECIO_PRESETS.find(
     (p) => p.min === filtros.precioMin && p.max === filtros.precioMax
   );
 
   const modelosDisponibles = modelosParaMarcas(marcas, filtros.marca);
-  const anioMinValue = filtros.anioMin ? String(filtros.anioMin) : TODOS;
-  const anioMaxValue = filtros.anioMax ? String(filtros.anioMax) : TODOS;
-
-  const itemsAnioDesde: Record<string, string> = { [TODOS]: "Desde" };
-  const itemsAnioHasta: Record<string, string> = { [TODOS]: "Hasta" };
-  for (const a of anios) {
-    itemsAnioDesde[String(a)] = String(a);
-    itemsAnioHasta[String(a)] = String(a);
-  }
-
-  const itemsKm: Record<string, string> = { [TODOS]: "Cualquiera" };
-  for (const km of KM_OPCIONES) itemsKm[String(km)] = `Hasta ${formatMiles(km)} km`;
 
   return (
     // El buscador queda fijo arriba; solo la lista de filtros scrollea debajo.
@@ -163,221 +107,210 @@ export function FiltrosPanel({
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden border-t border-border pr-1">
-
-      <Seccion
-        titulo="Precio"
-        activos={(filtros.precioMin || filtros.precioMax ? 1 : 0) + (filtros.baja ? 1 : 0)}
-      >
-        <OpcionTilde
-          checked={Boolean(filtros.baja)}
-          onToggle={() => ir({ ...filtros, baja: filtros.baja ? undefined : true })}
+        <Seccion
+          titulo="Precio"
+          activos={(filtros.precioMin || filtros.precioMax ? 1 : 0) + (filtros.baja ? 1 : 0)}
         >
-          Bajaron de precio
-        </OpcionTilde>
-        <div className="mt-1 flex flex-col gap-1">
-          {PRECIO_PRESETS.map((preset) => {
-            const activo = presetActivo === preset;
-            return (
-              <button
-                key={preset.label}
-                type="button"
-                aria-pressed={activo}
-                onClick={() =>
-                  activo ? irConPrecio(undefined, undefined) : irConPrecio(preset.min, preset.max)
-                }
-                className={cn(
-                  "rounded-lg px-3 py-2 text-left transition-colors",
-                  activo
-                    ? "bg-brand font-semibold text-white"
-                    : "hover:text-brand"
-                )}
-              >
-                {preset.label}
-              </button>
-            );
-          })}
-        </div>
-        <p className="mb-1.5 mt-4 text-xs text-muted-foreground">O elegí tu rango</p>
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            inputMode="numeric"
-            placeholder="Mínimo"
-            className="h-9"
-            value={!presetActivo && filtros.precioMin ? formatMiles(filtros.precioMin) : ""}
-            onChange={(e) => irConPrecio(parseMiles(e.target.value), filtros.precioMax)}
-          />
-          <Input
-            inputMode="numeric"
-            placeholder="Máximo"
-            className="h-9"
-            value={!presetActivo && filtros.precioMax ? formatMiles(filtros.precioMax) : ""}
-            onChange={(e) => irConPrecio(filtros.precioMin, parseMiles(e.target.value))}
-          />
-        </div>
-      </Seccion>
-
-      {hayCarroceria && (
-        <Seccion titulo="Carrocería" activos={filtros.carroceria.length}>
-          <div className="flex flex-col gap-1">
-            {CARROCERIAS.map((c) => (
-              <OpcionTilde
-                key={c.value}
-                checked={filtros.carroceria.includes(c.value)}
-                onToggle={() =>
-                  ir({
-                    ...filtros,
-                    carroceria: toggleEnArray(filtros.carroceria, c.value),
-                  })
-                }
-              >
-                {c.label}
-              </OpcionTilde>
-            ))}
+          <OpcionLink
+            checked={Boolean(filtros.baja)}
+            {...opcion({ ...filtros, baja: filtros.baja ? undefined : true })}
+          >
+            Bajaron de precio
+          </OpcionLink>
+          <div className="mt-1 flex flex-col gap-1">
+            {PRECIO_PRESETS.map((preset) => {
+              const activo = presetActivo === preset;
+              return (
+                <OpcionBoton
+                  key={preset.label}
+                  activo={activo}
+                  {...opcion(activo ? conPrecio(undefined, undefined) : conPrecio(preset.min, preset.max))}
+                >
+                  {preset.label}
+                </OpcionBoton>
+              );
+            })}
           </div>
+          <p className="mb-1.5 mt-4 text-xs text-muted-foreground">O elegí tu rango</p>
+          {/* key: si el rango cambia desde afuera (chip, preset), los campos se rearman. */}
+          <FormFiltro
+            key={`${filtros.precioMin ?? ""}-${filtros.precioMax ?? ""}`}
+            ocultos={[
+              ...camposOcultos(filtros, ["precio_min", "precio_max", "orden"]),
+              ...(filtros.orden === ORDEN_DEFECTO
+                ? ([["orden", "precio_asc"]] as [string, string][])
+                : ([["orden", filtros.orden]] as [string, string][])),
+            ]}
+            botonSiempre
+            onAplicar={(datos) => ir(conPrecio(numeroDe(datos, "precio_min"), numeroDe(datos, "precio_max")))}
+          >
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                name="precio_min"
+                inputMode="numeric"
+                placeholder="Mínimo"
+                aria-label="Precio mínimo"
+                className="h-9"
+                defaultValue={!presetActivo && filtros.precioMin ? formatMiles(filtros.precioMin) : ""}
+                onChange={(e) => (e.currentTarget.value = formatMiles(e.currentTarget.value))}
+              />
+              <Input
+                name="precio_max"
+                inputMode="numeric"
+                placeholder="Máximo"
+                aria-label="Precio máximo"
+                className="h-9"
+                defaultValue={!presetActivo && filtros.precioMax ? formatMiles(filtros.precioMax) : ""}
+                onChange={(e) => (e.currentTarget.value = formatMiles(e.currentTarget.value))}
+              />
+            </div>
+          </FormFiltro>
         </Seccion>
-      )}
 
-      {marcas.length > 0 && (
-        <Seccion titulo="Marca" activos={filtros.marca.length}>
-          <div className="flex flex-col gap-1">
-            {marcas.map((m) => (
-              <OpcionTilde
-                key={m.marca}
-                checked={filtros.marca.includes(m.marca)}
-                onToggle={() =>
-                  ir({ ...filtros, marca: toggleEnArray(filtros.marca, m.marca) })
-                }
-              >
-                {m.marca} ({m.cantidad})
-              </OpcionTilde>
-            ))}
-          </div>
-        </Seccion>
-      )}
+        {hayCarroceria && (
+          <Seccion titulo="Carrocería" activos={filtros.carroceria.length}>
+            <div className="flex flex-col gap-1">
+              {CARROCERIAS.map((c) => (
+                <OpcionLink
+                  key={c.value}
+                  checked={filtros.carroceria.includes(c.value)}
+                  {...opcion({ ...filtros, carroceria: toggleEnArray(filtros.carroceria, c.value) })}
+                >
+                  {c.label}
+                </OpcionLink>
+              ))}
+            </div>
+          </Seccion>
+        )}
 
-      {filtros.marca.length > 0 && modelosDisponibles.length > 0 && (
-        <Seccion titulo="Modelo" activos={filtros.modelo.length}>
-          <div className="flex flex-col gap-1">
-            {modelosDisponibles.map((m) => (
-              <OpcionTilde
-                key={m.modelo}
-                checked={filtros.modelo.includes(m.modelo)}
-                onToggle={() =>
-                  ir({ ...filtros, modelo: toggleEnArray(filtros.modelo, m.modelo) })
-                }
-              >
-                {m.modelo} ({m.cantidad})
-              </OpcionTilde>
-            ))}
-          </div>
-        </Seccion>
-      )}
+        {marcas.length > 0 && (
+          <Seccion titulo="Marca" activos={filtros.marca.length}>
+            <div className="flex flex-col gap-1">
+              {marcas.map((m) => (
+                <OpcionLink
+                  key={m.marca}
+                  checked={filtros.marca.includes(m.marca)}
+                  {...opcion({ ...filtros, marca: toggleEnArray(filtros.marca, m.marca) })}
+                >
+                  {m.marca} ({m.cantidad})
+                </OpcionLink>
+              ))}
+            </div>
+          </Seccion>
+        )}
 
-      {anios.length > 0 && (
-        <Seccion titulo="Año" activos={(filtros.anioMin || filtros.anioMax ? 1 : 0)}>
-          <div className="grid grid-cols-2 gap-2">
-            <Select
-              items={itemsAnioDesde}
-              value={anioMinValue}
-              onValueChange={(v) =>
-                ir({ ...filtros, anioMin: v && v !== TODOS ? Number(v) : undefined })
+        {filtros.marca.length > 0 && modelosDisponibles.length > 0 && (
+          <Seccion titulo="Modelo" activos={filtros.modelo.length}>
+            <div className="flex flex-col gap-1">
+              {modelosDisponibles.map((m) => (
+                <OpcionLink
+                  key={m.modelo}
+                  checked={filtros.modelo.includes(m.modelo)}
+                  {...opcion({ ...filtros, modelo: toggleEnArray(filtros.modelo, m.modelo) })}
+                >
+                  {m.modelo} ({m.cantidad})
+                </OpcionLink>
+              ))}
+            </div>
+          </Seccion>
+        )}
+
+        {anios.length > 0 && (
+          <Seccion titulo="Año" activos={filtros.anioMin || filtros.anioMax ? 1 : 0}>
+            <FormFiltro
+              key={`${filtros.anioMin ?? ""}-${filtros.anioMax ?? ""}`}
+              ocultos={camposOcultos(filtros, ["anio_min", "anio_max", "anio"])}
+              onAplicar={(datos) =>
+                ir({
+                  ...filtros,
+                  anioMin: Number(datos.get("anio_min")) || undefined,
+                  anioMax: Number(datos.get("anio_max")) || undefined,
+                })
               }
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Desde" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={TODOS}>Desde</SelectItem>
-                {anios.map((a) => (
-                  <SelectItem key={a} value={String(a)}>
-                    {a}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <div className="grid grid-cols-2 gap-2">
+                <SelectNativo
+                  name="anio_min"
+                  aria-label="Año desde"
+                  defaultValue={filtros.anioMin ? String(filtros.anioMin) : ""}
+                  onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                >
+                  <option value="">Desde</option>
+                  {anios.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </SelectNativo>
+                <SelectNativo
+                  name="anio_max"
+                  aria-label="Año hasta"
+                  defaultValue={filtros.anioMax ? String(filtros.anioMax) : ""}
+                  onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                >
+                  <option value="">Hasta</option>
+                  {anios.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </SelectNativo>
+              </div>
+            </FormFiltro>
+          </Seccion>
+        )}
 
-            <Select
-              items={itemsAnioHasta}
-              value={anioMaxValue}
-              onValueChange={(v) =>
-                ir({ ...filtros, anioMax: v && v !== TODOS ? Number(v) : undefined })
-              }
+        <Seccion titulo="Kilómetros" activos={filtros.kmMax ? 1 : 0}>
+          <FormFiltro
+            key={filtros.kmMax ?? ""}
+            ocultos={camposOcultos(filtros, ["km_max"])}
+            onAplicar={(datos) => ir({ ...filtros, kmMax: numeroDe(datos, "km_max") })}
+          >
+            <SelectNativo
+              name="km_max"
+              aria-label="Kilómetros"
+              defaultValue={filtros.kmMax ? String(filtros.kmMax) : ""}
+              onChange={(e) => e.currentTarget.form?.requestSubmit()}
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Hasta" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={TODOS}>Hasta</SelectItem>
-                {anios.map((a) => (
-                  <SelectItem key={a} value={String(a)}>
-                    {a}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <option value="">Cualquiera</option>
+              {KM_OPCIONES.map((km) => (
+                <option key={km} value={km}>
+                  Hasta {formatMiles(km)} km
+                </option>
+              ))}
+            </SelectNativo>
+          </FormFiltro>
         </Seccion>
-      )}
 
-      <Seccion titulo="Kilómetros" activos={(filtros.kmMax ? 1 : 0)}>
-        <Select
-          items={itemsKm}
-          value={filtros.kmMax ? String(filtros.kmMax) : TODOS}
-          onValueChange={(v) =>
-            ir({ ...filtros, kmMax: v && v !== TODOS ? Number(v) : undefined })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Cualquiera" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={TODOS}>Cualquiera</SelectItem>
-            {KM_OPCIONES.map((km) => (
-              <SelectItem key={km} value={String(km)}>
-                Hasta {formatMiles(km)} km
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Seccion>
-
-      <Seccion titulo="Combustible" activos={filtros.combustible.length}>
-        <div className="flex flex-col gap-1">
-          {COMBUSTIBLES.map((c) => (
-            <OpcionTilde
-              key={c}
-              checked={filtros.combustible.includes(c)}
-              onToggle={() =>
-                ir({ ...filtros, combustible: toggleEnArray(filtros.combustible, c) })
-              }
-            >
-              {c}
-            </OpcionTilde>
-          ))}
-        </div>
-      </Seccion>
-
-      {hayTransmision && (
-        <Seccion titulo="Transmisión" activos={filtros.transmision.length}>
+        <Seccion titulo="Combustible" activos={filtros.combustible.length}>
           <div className="flex flex-col gap-1">
-            {TRANSMISIONES.map((t) => (
-              <OpcionTilde
-                key={t.value}
-                checked={filtros.transmision.includes(t.value)}
-                onToggle={() =>
-                  ir({
-                    ...filtros,
-                    transmision: toggleEnArray(filtros.transmision, t.value),
-                  })
-                }
+            {COMBUSTIBLES.map((c) => (
+              <OpcionLink
+                key={c}
+                checked={filtros.combustible.includes(c)}
+                {...opcion({ ...filtros, combustible: toggleEnArray(filtros.combustible, c) })}
               >
-                {t.label}
-              </OpcionTilde>
+                {c}
+              </OpcionLink>
             ))}
           </div>
         </Seccion>
-      )}
 
+        {hayTransmision && (
+          <Seccion titulo="Transmisión" activos={filtros.transmision.length}>
+            <div className="flex flex-col gap-1">
+              {TRANSMISIONES.map((t) => (
+                <OpcionLink
+                  key={t.value}
+                  checked={filtros.transmision.includes(t.value)}
+                  {...opcion({ ...filtros, transmision: toggleEnArray(filtros.transmision, t.value) })}
+                >
+                  {t.label}
+                </OpcionLink>
+              ))}
+            </div>
+          </Seccion>
+        )}
       </div>
     </div>
   );

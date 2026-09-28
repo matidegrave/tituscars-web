@@ -60,6 +60,16 @@ function aNumero(v?: string | string[]): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/**
+ * Montos (precio, km): sólo los dígitos, así un form sin JS puede mandar
+ * "15.000.000" tal como se escribe.
+ */
+function aMonto(v?: string | string[]): number | undefined {
+  const valor = Array.isArray(v) ? v[0] : v;
+  const digitos = valor?.replace(/\D/g, "");
+  return digitos ? Number(digitos) : undefined;
+}
+
 export function parseFiltros(sp: SearchParamsCatalogo): Filtros {
   // ?anio= viene del buscador de la home (un solo año) -> anio_min = anio_max
   const anioUnico = aNumero(sp.anio);
@@ -71,9 +81,9 @@ export function parseFiltros(sp: SearchParamsCatalogo): Filtros {
     modelo: aArray(sp.modelo),
     anioMin: aNumero(sp.anio_min) ?? anioUnico,
     anioMax: aNumero(sp.anio_max) ?? anioUnico,
-    precioMin: aNumero(sp.precio_min),
-    precioMax: aNumero(sp.precio_max),
-    kmMax: aNumero(sp.km_max),
+    precioMin: aMonto(sp.precio_min),
+    precioMax: aMonto(sp.precio_max),
+    kmMax: aMonto(sp.km_max),
     combustible: aArray(sp.combustible),
     transmision: aArray(sp.transmision),
     carroceria: aArray(sp.carroceria),
@@ -104,6 +114,26 @@ export function filtrosAParams(f: Filtros): URLSearchParams {
   if (f.page && f.page > 1) p.set("page", String(f.page));
 
   return p;
+}
+
+/**
+ * URL del catálogo con estos filtros (página 1). Sin URLSearchParams.size: no
+ * existe en Chrome < 113 ni Safari < 17, y ahí "size > 0" daba false y todos
+ * los filtros navegaban a /autos pelado (bug de los filtros en Win7 / iOS 16).
+ */
+export function urlCatalogo(f: Filtros): string {
+  const query = filtrosAParams({ ...f, page: 1 }).toString();
+  return query ? `/autos?${query}` : "/autos";
+}
+
+/**
+ * Campos ocultos para un <form method="get" action="/autos"> que cambia sólo
+ * algunos filtros: todos los demás parámetros actuales (sin JS no se pierden).
+ */
+export function camposOcultos(f: Filtros, sin: string[]): [string, string][] {
+  const p = filtrosAParams({ ...f, page: 1 });
+  for (const clave of sin) p.delete(clave);
+  return [...p.entries()];
 }
 
 export function filtrosVacios(): Filtros {

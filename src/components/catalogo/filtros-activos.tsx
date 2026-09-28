@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { X } from "lucide-react";
-import { filtrosAParams, PRECIO_PRESETS, type Filtros } from "@/lib/filtros";
+import { PRECIO_PRESETS, urlCatalogo, type Filtros } from "@/lib/filtros";
 import { formatMiles } from "@/lib/format";
 
 const LABEL_TRANSMISION: Record<string, string> = {
@@ -23,8 +23,7 @@ interface Chip {
 }
 
 function href(f: Filtros): string {
-  const params = filtrosAParams({ ...f, page: 1 });
-  return `/autos${params.size > 0 ? `?${params.toString()}` : ""}`;
+  return urlCatalogo(f);
 }
 
 export function FiltrosActivos({ filtros }: { filtros: Filtros }) {

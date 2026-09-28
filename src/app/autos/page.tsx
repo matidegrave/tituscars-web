@@ -84,10 +84,7 @@ export default async function CatalogoPage({
                 hayTransmision={hayTransmision}
                 hayCarroceria={hayCarroceria}
               />
-              <OrdenSelect
-                filtros={filtros}
-                className="w-full justify-center border-border data-[size=default]:h-10 bg-background px-2.5 font-medium hover:bg-muted *:data-[slot=select-value]:flex-none"
-              />
+              <OrdenSelect filtros={filtros} className="bg-background" />
             </div>
 
             {/* Destino del scroll al buscar (debajo del header fijo). */}

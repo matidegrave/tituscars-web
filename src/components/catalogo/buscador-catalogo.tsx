@@ -3,17 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
-import { filtrosAParams, type Filtros } from "@/lib/filtros";
+import { camposOcultos, urlCatalogo, type Filtros } from "@/lib/filtros";
 import { track } from "@/lib/tracking";
 import { cn } from "@/lib/utils";
 
 /** Donde arrancan los resultados (chips + listado): destino del scroll al buscar. */
 export const ID_RESULTADOS = "resultados";
 
-function urlCatalogo(filtros: Filtros): string {
-  const params = filtrosAParams({ ...filtros, page: 1 });
-  return `/autos${params.size > 0 ? `?${params.toString()}` : ""}`;
-}
 
 /**
  * Buscador del catálogo (celu y compu). Mientras se escribe NO se busca nada:
@@ -77,7 +73,7 @@ export function BuscadorCatalogo({
   }
 
   // Sin JS: los demás filtros viajan como campos ocultos para no perderlos.
-  const ocultos = [...filtrosAParams({ ...filtros, q: undefined, page: 1 }).entries()];
+  const ocultos = camposOcultos(filtros, ["q"]);
 
   return (
     <form role="search" method="get" action="/autos" onSubmit={enviar} className={cn("flex", className)}>
