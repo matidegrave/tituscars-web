@@ -22,7 +22,7 @@ export function AutoGrid({
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {autos.map((auto, i) => (
-        <AutoCard key={auto.id} auto={auto} prioridad={prioridadPrimera && i === 0} />
+        <AutoCard key={auto.id} auto={auto} prioridad={prioridadPrimera && i === 0} posicion={i + 1} />
       ))}
     </div>
   );

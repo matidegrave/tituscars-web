@@ -7,6 +7,8 @@ import { EstrellasPuntaje } from "@/components/estrellas-puntaje";
 import { AvisoHorario } from "@/components/aviso-horario";
 import { GOOGLE_PUNTAJE, RESENAS_CANTIDAD, RESENAS_URL } from "@/lib/config";
 import { track } from "@/lib/tracking";
+import { BotonFavorito } from "@/components/favoritos/boton-favorito";
+import type { Favorito } from "@/lib/favoritos";
 
 /** true si copió el link (sin share nativo); false si usó el share o falló. */
 async function compartir(titulo: string): Promise<boolean> {
@@ -39,6 +41,7 @@ export function WhatsappCta({
   hrefWhatsapp,
   intenciones,
   trackAuto,
+  favorito,
 }: {
   titulo: string;
   precioFormateado: string;
@@ -47,6 +50,8 @@ export function WhatsappCta({
   intenciones: { texto: string; href: string; detalle: string }[];
   /** Datos del auto para el click_whatsapp / Lead (los lee MetaPixel del link). */
   trackAuto: { auto_id: string; slug: string; valor: number };
+  /** Datos para guardarlo en favoritos (corazón al lado de compartir). */
+  favorito: Omit<Favorito, "ts">;
 }) {
   // "Link copiado" en el mismo botón (antes era un toast: el Toaster sumaba
   // ~9 KB de JS a todas las páginas sólo para este aviso).
@@ -106,6 +111,7 @@ export function WhatsappCta({
             {copiado ? "Link copiado" : ""}
           </span>
         </button>
+        <BotonFavorito auto={favorito} variante="ficha" />
       </div>
 
       {/* Consultas con intención: mensaje prearmado según lo que quiere saber. */}

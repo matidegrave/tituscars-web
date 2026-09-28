@@ -35,7 +35,9 @@ import {
   sugerirCorreccion,
 } from "@/lib/busqueda";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { listaSugerencias } from "@/lib/sugerencias";
 import type { AutoCatalogo } from "@/lib/types";
+import { conColores } from "@/lib/color-foto";
 import { calcularFacets } from "@/lib/facets";
 import {
   filtrosAParams,
@@ -88,13 +90,14 @@ export default async function CatalogoPage({
   const [facetRows, anios, resultado, conBaja, ceroKm] = await Promise.all([
     getFacetsBase(),
     getAnios(),
-    getAutosPaginados(filtros),
+    getAutosPaginados(filtros).then(async (r) => ({ ...r, autos: await conColores(r.autos) })),
     getAutosConBaja(2),
     hayCeroKm(),
   ]);
 
   const { marcas, hayTransmision, hayCarroceria } = calcularFacets(facetRows);
   const { autos, total } = resultado;
+  const sugerencias = listaSugerencias(marcas);
 
   // Búsqueda sin resultados: "¿Quisiste decir…?" y autos parecidos.
   let sinResultados: {
@@ -125,12 +128,12 @@ export default async function CatalogoPage({
     const marca = marcas.find((m) => compacto.includes(normalizar(m.marca).replace(/ /g, "")));
     const carroceria = carroceriaParecida(filtros.q);
     const buscarParecidos = (f: Partial<Filtros>) =>
-      getAutosPaginados({ ...filtrosVacios(), ...f }).then((r) => r.autos.slice(0, 8));
+      getAutosPaginados({ ...filtrosVacios(), ...f }).then((r) => conColores(r.autos.slice(0, 8)));
     const parecidos = marca
       ? await buscarParecidos({ marca: [marca.marca] })
       : carroceria
         ? await buscarParecidos({ carroceria: [carroceria] })
-        : await getUltimosIngresos(8);
+        : await getUltimosIngresos(8).then(conColores);
     sinResultados = {
       sugerencia: correccion
         ? { texto: correccion.texto, href: urlCatalogo({ ...filtros, q: correccion.texto }) }
@@ -152,6 +155,7 @@ export default async function CatalogoPage({
             <FiltrosPanel
               filtros={filtros}
               marcas={marcas}
+              sugerencias={sugerencias}
               anios={anios}
               hayTransmision={hayTransmision}
               hayCarroceria={hayCarroceria}
@@ -172,7 +176,7 @@ export default async function CatalogoPage({
             {/* Hija directa de la columna del listado: sticky necesita que su
                 contenedor sea el que tiene toda la lista. */}
             <BarraCatalogoCelu className="mt-2">
-              <BuscadorCatalogo filtros={filtros} id="filtro-busqueda-celu" />
+              <BuscadorCatalogo filtros={filtros} id="filtro-busqueda-celu" sugerencias={sugerencias} />
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <FiltrosDrawer
                   filtros={filtros}

@@ -322,3 +322,16 @@ export async function getSimilares(
 
   return resultado.slice(0, limite);
 }
+
+/** Autos en stock (no señados) con esos ids, para /favoritos. Sin los textos largos. */
+export async function getAutosPorIds(ids: string[]): Promise<AutoCatalogo[]> {
+  if (ids.length === 0) return [];
+  const { data } = await supabase.from(TABLA).select("*").neq("estado", "senado").in("id", ids);
+  return (data ?? []).map((a: AutoCatalogo) => ({
+    ...a,
+    fotos: null,
+    publicacion_texto: null,
+    descripcion_items: null,
+    descripcion_extra: null,
+  }));
+}

@@ -211,3 +211,53 @@ export function carroceriaParecida(q: string): string | null {
   }
   return null;
 }
+
+// ─── Sugerencias al escribir (tanda 40) ─────────────────────────────────────
+
+export interface Sugerencia {
+  /** Lo que se muestra: "Nissan Versa (2)" sin la cantidad, "Camionetas". */
+  texto: string;
+  cantidad?: number;
+  /** A dónde lleva (listado filtrado). */
+  href: string;
+  /** Texto normalizado para comparar (sin tildes ni signos). */
+  clave: string;
+}
+
+/** Categorías que también se sugieren (las mismas palabras del buscador). */
+export const CATEGORIAS_SUGERIDAS: { texto: string; claves: string[]; query: string }[] = [
+  { texto: "Camionetas", claves: ["camioneta", "pickup"], query: "carroceria=camioneta" },
+  { texto: "SUV", claves: ["suv"], query: "carroceria=suv" },
+  { texto: "Utilitarios", claves: ["utilitario", "furgon"], query: "carroceria=utilitario" },
+  { texto: "Autos", claves: ["auto", "sedan", "hatch"], query: "carroceria=auto" },
+  { texto: "Motos", claves: ["moto"], query: "carroceria=moto" },
+  { texto: "Automáticos", claves: ["automatico", "automatica"], query: "transmision=automatica" },
+  { texto: "Manuales", claves: ["manual"], query: "transmision=manual" },
+  { texto: "GNC", claves: ["gnc"], query: "combustible=GNC" },
+  { texto: "Diesel", claves: ["diesel", "gasoil"], query: "combustible=Diesel" },
+  { texto: "Nafta", claves: ["nafta"], query: "combustible=Nafta" },
+  { texto: "0 KM", claves: ["0km", "nuevo"], query: "condicion=0km" },
+  { texto: "Usados", claves: ["usado"], query: "condicion=usado" },
+];
+
+/**
+ * Hasta `max` sugerencias para lo que se está escribiendo (desde 2 letras):
+ * primero las que empiezan igual (en cualquier palabra), después las que lo
+ * contienen; a igualdad, las de más stock. Todo en el navegador, sin pedidos.
+ */
+export function filtrarSugerencias(escrito: string, lista: Sugerencia[], max = 6): Sugerencia[] {
+  const q = normalizar(escrito);
+  if (q.replace(/ /g, "").length < 2) return [];
+  const compacto = q.replace(/ /g, "");
+  const puntuadas: { s: Sugerencia; p: number }[] = [];
+  for (const s of lista) {
+    const palabras = s.clave.split(" ");
+    const empieza = s.clave.startsWith(q) || palabras.some((p) => p.startsWith(q));
+    const contiene = s.clave.replace(/ /g, "").includes(compacto);
+    if (empieza || contiene) puntuadas.push({ s, p: empieza ? 0 : 1 });
+  }
+  return puntuadas
+    .sort((a, b) => a.p - b.p || (b.s.cantidad ?? 0) - (a.s.cantidad ?? 0))
+    .slice(0, max)
+    .map((x) => x.s);
+}

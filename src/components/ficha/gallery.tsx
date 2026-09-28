@@ -11,6 +11,7 @@ import {
 import { abrirVisorFotos, type VisorAbierto } from "@/components/ficha/visor-fotos";
 import { PastillaDisponibilidad } from "@/components/pastilla-disponibilidad";
 import type { AutoCatalogo, Foto } from "@/lib/types";
+import { fotoDeEntrada } from "@/lib/recorrido";
 
 export function FichaGallery({
   fotos,
@@ -18,13 +19,22 @@ export function FichaGallery({
   senado,
   ceroKm,
   disponibilidad,
+  slug,
+  colores,
 }: {
   fotos: Foto[];
   alt: string;
   senado: boolean;
   ceroKm: boolean;
   disponibilidad: AutoCatalogo["disponibilidad"];
+  slug: string;
+  /** Color promedio de cada foto (por URL): fondo mientras cargan. */
+  colores?: Record<string, string>;
 }) {
+  // Si se llegó tocando una card, su foto (misma URL, ya en caché) se ve al
+  // instante debajo de la primera mientras ésta carga. Sólo en navegación del
+  // cliente: en una carga directa no hay entrada (y el server tampoco la ve).
+  const [fotoCard] = useState(() => fotoDeEntrada(slug));
   const ordenadas = fotos.length > 0 ? [...fotos].sort((a, b) => a.orden - b.orden) : [];
   const [activo, setActivo] = useState(0);
   // Carrusel de la foto principal (swipe): su foto visible es la activa.
@@ -103,7 +113,12 @@ export function FichaGallery({
                   onClick={(e) => void abrirVisor(i, e.currentTarget)}
                   aria-label={`Ver foto ${i + 1} de ${ordenadas.length} en grande`}
                   className="relative block aspect-[4/3] w-full"
+                  style={colores?.[foto.url] ? { backgroundColor: colores[foto.url] } : undefined}
                 >
+                  {i === 0 && fotoCard && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={fotoCard} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  )}
                   {/* La primera es la foto LCP: va en el HTML, eager y con prioridad
                       alta (en Next 16 `priority` está deprecado: se usa loading +
                       fetchPriority). Las demás se montan después del load; ahí la

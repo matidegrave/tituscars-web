@@ -46,6 +46,11 @@ export interface AutoCatalogo {
   precio_anterior: number | null;
   /** precio_anterior convertido a ARS, como precio_ars. */
   precio_anterior_ars: number | null;
+  /**
+   * Color promedio de foto_principal ("#8a7f75"), de fondo mientras carga la
+   * foto. No viene de la base: lo agrega lib/color-foto.ts; puede faltar.
+   */
+  color_foto?: string;
   precio_bajo_en: string | null;
   estado: Estado;
   destacado_web: boolean;

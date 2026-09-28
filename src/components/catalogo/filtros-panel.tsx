@@ -12,6 +12,7 @@ import {
   type Filtros,
 } from "@/lib/filtros";
 import { modelosParaMarcas, type FacetMarca } from "@/lib/facets";
+import type { Sugerencia } from "@/lib/busqueda";
 import { BuscadorCatalogo } from "@/components/catalogo/buscador-catalogo";
 import {
   FormFiltro,
@@ -54,8 +55,11 @@ export function FiltrosPanel({
   hayTransmision,
   hayCarroceria,
   onCambiar,
+  sugerencias,
 }: {
   filtros: Filtros;
+  /** Sugerencias del buscador (sólo el de la compu, arriba del panel). */
+  sugerencias?: Sugerencia[];
   marcas: FacetMarca[];
   anios: number[];
   hayTransmision: boolean;
@@ -103,7 +107,7 @@ export function FiltrosPanel({
     <div className="flex min-h-0 flex-1 flex-col text-sm">
       {!onCambiar && (
         <div className="shrink-0 pb-4">
-          <BuscadorCatalogo filtros={filtros} id="filtro-busqueda" />
+          <BuscadorCatalogo filtros={filtros} id="filtro-busqueda" sugerencias={sugerencias} />
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden border-t border-border pr-1">

@@ -5,6 +5,7 @@ import { getAutoPorSlug, getSimilares, getSlugActualPorSufijo } from "@/lib/auto
 import type { AutoCatalogo } from "@/lib/types";
 import { bajaDePrecio, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
 import { FichaGallery } from "@/components/ficha/gallery";
+import { coloresDeFotos, conColores } from "@/lib/color-foto";
 import { FichaTecnica } from "@/components/ficha/ficha-tecnica";
 import { WhatsappCta } from "@/components/ficha/whatsapp-bar";
 import { Descripcion } from "@/components/ficha/descripcion";
@@ -13,7 +14,8 @@ import { Confianza } from "@/components/ficha/confianza";
 import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdAuto } from "@/lib/json-ld";
-import { TrackAlMontar } from "@/components/tracking/track-al-montar";
+import { TrackVistaAuto } from "@/components/tracking/track-vista-auto";
+import { NavegacionFicha } from "@/components/ficha/navegacion-ficha";
 import { CalendarDays, Car, Fuel, Gauge, Settings2 } from "lucide-react";
 import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
@@ -78,7 +80,7 @@ export default async function FichaAutoPage({
   const { slug } = await params;
   const auto = await resolverAuto(slug);
 
-  const similares = await getSimilares(auto);
+  const similares = await getSimilares(auto).then(conColores);
 
   // Link de la ficha con el dominio por el que entró el cliente, para el
   // mensaje de WhatsApp (el <a href> se arma acá, en el servidor).
@@ -95,13 +97,15 @@ export default async function FichaAutoPage({
       ? [{ url: auto.foto_principal, orden: 0, principal: true }]
       : [];
 
+  const colores = await coloresDeFotos(fotos.map((f) => f.url));
+
   const jsonLd = jsonLdAuto(auto);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 pb-28 sm:pb-8">
+    <div className="relative mx-auto max-w-6xl px-4 py-8 pb-28 sm:pb-8">
       <JsonLd data={jsonLd} />
-      <TrackAlMontar
-        tipo="vista_auto"
+      <NavegacionFicha slug={auto.slug} />
+      <TrackVistaAuto
         datos={{
           auto_id: auto.id,
           slug: auto.slug,
@@ -118,10 +122,12 @@ export default async function FichaAutoPage({
             senado={auto.estado === "senado"}
             ceroKm={auto.condicion === "0km"}
             disponibilidad={auto.disponibilidad}
+            slug={auto.slug}
+            colores={colores}
           />
         </div>
 
-        <div className="flex flex-col gap-6 lg:col-span-2">
+        <div id="ficha-datos" className="flex flex-col gap-6 lg:col-span-2">
           <div>
             <h1 className="text-2xl font-bold uppercase tracking-tight">{titulo}</h1>
             <p className="text-muted-foreground">{auto.anio}</p>
@@ -179,6 +185,14 @@ export default async function FichaAutoPage({
             titulo={titulo}
             trackAuto={{ auto_id: auto.id, slug: auto.slug, valor: auto.precio_ars }}
             precioFormateado={precioFormateado}
+            favorito={{
+              id: auto.id,
+              slug: auto.slug,
+              titulo,
+              anio: auto.anio,
+              precio: precioFormateado,
+              foto: auto.foto_principal,
+            }}
             intenciones={[
               {
                 texto: "¿Está disponible?",

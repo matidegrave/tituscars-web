@@ -8,6 +8,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
 import { MenuMovil } from "@/components/menu-movil";
+import { ContadorFavoritos } from "@/components/favoritos/contador-favoritos";
 
 const NAV_LINKS = [
   { href: "/", label: "Inicio" },
@@ -19,7 +20,9 @@ const NAV_LINKS = [
 ];
 
 function esActivo(pathname: string, href: string): boolean {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  return href === "/"
+    ? pathname === "/"
+    : pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function SiteHeader() {
@@ -88,30 +91,40 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="hidden lg:block">
+        <div className="hidden items-center gap-2 lg:flex">
+          <ContadorFavoritos />
           <Button
             className="bg-white text-brand hover:bg-white/90"
             nativeButton={false}
             render={
-              <a href={linkWhatsappSegunRuta(pathname)} target="_blank" rel="noopener noreferrer" />
+              <a
+                href={linkWhatsappSegunRuta(pathname)}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
             }
           >
             WhatsApp
           </Button>
         </div>
 
-        <button
-          type="button"
-          aria-label={abierto ? "Cerrar menú" : "Abrir menú"}
-          aria-expanded={abierto}
-          className="flex h-10 w-10 items-center justify-center text-white lg:hidden"
-          onClick={() => setAbierto((v) => !v)}
-        >
-          {abierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <div className="flex items-center gap-1 lg:hidden">
+          <ContadorFavoritos />
+          <button
+            type="button"
+            aria-label={abierto ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={abierto}
+            className="flex h-10 w-10 items-center justify-center text-white lg:hidden"
+            onClick={() => setAbierto((v) => !v)}
+          >
+            {abierto ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </div>
 
-      {abierto && <MenuMovil links={NAV_LINKS} onCerrar={() => setAbierto(false)} />}
+      {abierto && (
+        <MenuMovil links={NAV_LINKS} onCerrar={() => setAbierto(false)} />
+      )}
     </header>
   );
 }

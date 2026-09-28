@@ -11,6 +11,7 @@ import { VersionGuard } from "@/components/version-guard";
 import { MetaPixel } from "@/components/tracking/meta-pixel";
 import { ModoEquipo } from "@/components/modo-equipo";
 import { WhatsappEnApps } from "@/components/whatsapp-en-apps";
+import { TransicionFicha } from "@/components/catalogo/transicion-ficha";
 import { COOKIE_EQUIPO } from "@/lib/equipo";
 import { SCRIPT_REPORTE_ERRORES } from "@/lib/reporte-errores-script";
 import { PIXEL_ID, SNIPPET_PIXEL } from "@/lib/tracking";
@@ -87,6 +88,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <VersionGuard />
         <MetaPixel />
         <WhatsappEnApps />
+        <TransicionFicha />
         <ModoEquipo />
         {pixelActivo && (
           <noscript>
