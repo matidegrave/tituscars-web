@@ -67,19 +67,46 @@ export async function abrirVisorFotos({
     errorMsg: "No se pudo cargar la foto",
   });
 
-  // Proporción real de la foto, si no es 4:3.
-  pswp.on("loadComplete", ({ content, slide }) => {
+  // Proporción real de cada foto (la base no guarda ancho/alto; se arranca con
+  // 4:3). Dos momentos:
+  // - loadComplete: la foto termina de cargar y su slide ya existe.
+  // - slideInit: se crea la slide de una foto que ya se había PRECARGADO
+  //   (PhotoSwipe precarga la anterior y las 2 siguientes antes de crear su
+  //   slide, y en ese caso no dispara loadComplete). Sin esto, una vertical a
+  //   la que se llegaba deslizando se armaba con el 4:3 estimado y se veía
+  //   estirada; al reabrirla, bien.
+  type ContenidoPswp = {
+    element?: HTMLElement;
+    width: number;
+    height: number;
+    data: { width?: number; height?: number };
+  };
+  type SlidePswp = { width: number; height: number; content: ContenidoPswp; calculateSize(): void; updateContentSize(force?: boolean): void };
+  const proporcionReal = (content: ContenidoPswp, slide: SlidePswp | undefined, recalcular: boolean) => {
     const img = content.element as HTMLImageElement | undefined;
-    if (!img?.naturalWidth || !slide) return;
-    const real = img.naturalWidth / img.naturalHeight;
-    if (Math.abs(real - ANCHO / ALTO) < 0.01) return;
-    content.width = img.naturalWidth;
-    content.height = img.naturalHeight;
-    slide.width = img.naturalWidth;
-    slide.height = img.naturalHeight;
-    slide.calculateSize();
-    slide.updateContentSize(true);
-  });
+    if (!img?.naturalWidth || !img.naturalHeight) return;
+    const ancho = img.naturalWidth;
+    const alto = img.naturalHeight;
+    const igual = content.width && content.height && Math.abs(content.width / content.height - ancho / alto) < 0.01;
+    if (!igual) {
+      content.data.width = ancho;
+      content.data.height = alto;
+      content.width = ancho;
+      content.height = alto;
+    }
+    if (slide && Math.abs(slide.width / slide.height - ancho / alto) >= 0.01) {
+      slide.width = ancho;
+      slide.height = alto;
+      if (recalcular) {
+        slide.calculateSize();
+        slide.updateContentSize(true);
+      }
+    }
+  };
+  pswp.on("loadComplete", ({ content, slide }) => proporcionReal(content, slide, true));
+  // En slideInit la slide todavía no se dibujó: alcanza con corregir el tamaño
+  // (el cálculo del layout viene después y ya usa el correcto).
+  pswp.on("slideInit", ({ slide }) => proporcionReal(slide.content, slide, false));
 
   pswp.on("change", () => alCambiar(pswp.currIndex));
 

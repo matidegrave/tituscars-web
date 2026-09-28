@@ -88,17 +88,6 @@ export default async function FichaAutoPage({
   const titulo = tituloAuto(auto);
   const precioFormateado = formatPrecio(auto.precio, auto.moneda);
   const baja = bajaDePrecio(auto);
-  // dd/mm en hora de Córdoba (Intl con es-AR no completa el mes con 0: "22/9").
-  const fechaBaja = (() => {
-    if (!auto.precio_bajo_en) return null;
-    const partes = new Intl.DateTimeFormat("es-AR", {
-      day: "numeric",
-      month: "numeric",
-      timeZone: "America/Argentina/Cordoba",
-    }).formatToParts(new Date(auto.precio_bajo_en));
-    const parte = (tipo: string) => (partes.find((p) => p.type === tipo)?.value ?? "").padStart(2, "0");
-    return `${parte("day")}/${parte("month")}`;
-  })();
   const fotos = auto.fotos && auto.fotos.length > 0
     ? auto.fotos
     : auto.foto_principal
@@ -141,11 +130,7 @@ export default async function FichaAutoPage({
             <p className={baja ? "text-3xl font-black" : "mt-2 text-3xl font-black"}>
               {precioFormateado}
             </p>
-            {baja && fechaBaja && (
-              <p className="mt-1 text-sm font-medium text-emerald-700">
-                Bajó de precio el {fechaBaja}
-              </p>
-            )}
+            {baja && <p className="mt-1 text-sm font-medium text-emerald-700">Bajó de precio</p>}
             <p className="mt-2 text-sm text-muted-foreground">
               {auto.disponibilidad === "salon"
                 ? `Disponible en nuestro salón, ${DIRECCION_CALLE}`

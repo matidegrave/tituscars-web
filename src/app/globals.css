@@ -140,3 +140,8 @@
     @apply font-sans;
   }
 }
+/* Visor de fotos (PhotoSwipe): una foto nunca se estira ni se recorta, aunque
+   su caja no tenga todavía la proporción real (ver visor-fotos.ts). */
+.pswp__img {
+  object-fit: contain;
+}

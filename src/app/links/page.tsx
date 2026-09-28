@@ -1,22 +1,27 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { MapPin } from "lucide-react";
-import { getAutosConBaja } from "@/lib/autos";
 import {
   DIRECCION,
+  GOOGLE_PUNTAJE,
   INSTAGRAM_URL,
   MAPS_COMO_LLEGAR,
+  RESENAS_URL,
   TIKTOK_URL,
   WHATSAPP_CONSIGNAS,
-  YOUTUBE_URL,
 } from "@/lib/config";
 import { linkWhatsapp } from "@/lib/whatsapp";
-import { InstagramIcon, TikTokIcon, YoutubeIcon } from "@/components/icons/social-icons";
+import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
+import {
+  GoogleMapsIcon,
+  InstagramColorIcon,
+  TikTokColorIcon,
+  TitusIsologo,
+} from "@/components/icons/marcas";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
 
 // /links: la página de la bio de Instagram y TikTok (reemplaza al Linktree).
 // Sin el marco del sitio (layout: OcultarEn), links <a> puros (anda sin JS) y
-// fuera de Google: noindex y fuera del sitemap.
+// fuera de Google: noindex y fuera del sitemap. Logos de marca como SVG inline.
 
 export const metadata: Metadata = {
   title: { absolute: "Titus Cars · Links" },
@@ -26,9 +31,26 @@ export const metadata: Metadata = {
 
 const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
 
+type Estilo = "naranja" | "verde" | "blanco";
+
+const ESTILOS: Record<Estilo, string> = {
+  naranja: "bg-brand text-white hover:bg-brand-dark",
+  verde: "bg-[#25D366] text-white hover:bg-[#1ebe5a]",
+  blanco: "border border-zinc-200 bg-white text-foreground hover:bg-zinc-50",
+};
+
+interface Boton {
+  texto: string;
+  href: string;
+  estilo: Estilo;
+  icono: React.ReactNode;
+  externo?: boolean;
+  /** Algo chico a la derecha (ej. el puntaje). */
+  extra?: string;
+}
+
 export default async function LinksPage({ searchParams }: PageProps<"/links">) {
   const sp = await searchParams;
-  const conBaja = await getAutosConBaja(2);
 
   // Los links internos conservan los utm_* con que se llegó (?utm_source=instagram
   // o tiktok), así la visita al catálogo sigue atribuida a la red.
@@ -42,23 +64,46 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
     return `${ruta}${ruta.includes("?") ? "&" : "?"}${utm.toString()}`;
   };
 
-  const botones: { texto: string; href: string; externo?: boolean }[] = [
-    { texto: "Quiero comprar un auto", href: linkWhatsapp("Hola! Quiero comprar un auto."), externo: true },
+  const icono = "h-6 w-6";
+  const botones: Boton[] = [
+    { texto: "Ver catálogo", href: interno("/autos"), estilo: "naranja", icono: <TitusIsologo className={icono} /> },
+    {
+      texto: "Quiero comprar un auto",
+      href: linkWhatsapp("Hola! Quiero comprar un auto."),
+      estilo: "verde",
+      icono: <WhatsappIcon className={icono} />,
+      externo: true,
+    },
     {
       texto: "Quiero vender / consignar mi auto",
       href: linkWhatsapp("Hola! Quiero vender mi auto.", WHATSAPP_CONSIGNAS),
+      estilo: "verde",
+      icono: <WhatsappIcon className={icono} />,
       externo: true,
     },
-    { texto: "Ver catálogo", href: interno("/autos") },
-    ...(conBaja.length >= 2 ? [{ texto: "Bajaron de precio", href: interno("/autos?baja=1") }] : []),
-    { texto: "Consigná tu auto", href: interno("/consigna") },
-  ];
-
-  const redes = [
-    { label: "Instagram", href: INSTAGRAM_URL, icono: <InstagramIcon className="h-5 w-5" /> },
-    { label: "TikTok", href: TIKTOK_URL, icono: <TikTokIcon className="h-5 w-5" /> },
-    { label: "YouTube", href: YOUTUBE_URL, icono: <YoutubeIcon className="h-5 w-5" /> },
-    { label: "Cómo llegar (Google Maps)", href: MAPS_COMO_LLEGAR, icono: <MapPin className="h-5 w-5" /> },
+    { texto: "Ubicación", href: MAPS_COMO_LLEGAR, estilo: "blanco", icono: <GoogleMapsIcon className={icono} />, externo: true },
+    {
+      texto: "Reseñas",
+      href: RESENAS_URL,
+      estilo: "blanco",
+      icono: <GoogleMapsIcon className={icono} />,
+      externo: true,
+      extra: `${GOOGLE_PUNTAJE} ★`,
+    },
+    {
+      texto: "Conocenos en Instagram",
+      href: INSTAGRAM_URL,
+      estilo: "blanco",
+      icono: <InstagramColorIcon className={icono} />,
+      externo: true,
+    },
+    {
+      texto: "Conocenos en TikTok",
+      href: TIKTOK_URL,
+      estilo: "blanco",
+      icono: <TikTokColorIcon className={icono} />,
+      externo: true,
+    },
   ];
 
   return (
@@ -85,36 +130,21 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
               key={b.texto}
               href={b.href}
               {...(b.externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              className="flex min-h-14 w-full items-center justify-center rounded-xl bg-brand px-4 py-3 text-center text-base font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark active:bg-brand-dark"
+              className={`relative flex min-h-14 w-full items-center justify-center rounded-xl px-11 py-3 text-center text-[15px] font-semibold sm:px-14 sm:text-base shadow-sm transition-colors ${ESTILOS[b.estilo]}`}
             >
+              {/* Ícono a la izquierda y texto centrado en todo el ancho. */}
+              <span className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center">{b.icono}</span>
               {b.texto}
+              {b.extra && (
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-foreground/70">
+                  {b.extra}
+                </span>
+              )}
             </a>
           ))}
         </nav>
 
-        <div className="mt-8 flex items-center justify-center gap-3">
-          {redes.map((r) => (
-            <a
-              key={r.label}
-              href={r.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={r.label}
-              title={r.label}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-foreground/80 shadow-sm transition-colors hover:text-brand"
-            >
-              {r.icono}
-            </a>
-          ))}
-        </div>
-        <a
-          href={MAPS_COMO_LLEGAR}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 block text-center text-sm text-muted-foreground underline-offset-2 hover:underline"
-        >
-          {DIRECCION}
-        </a>
+        <p className="mt-6 text-center text-xs text-muted-foreground">{DIRECCION}</p>
       </div>
     </div>
   );
