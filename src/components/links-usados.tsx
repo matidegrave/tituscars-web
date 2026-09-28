@@ -7,7 +7,6 @@ import {
   paginasConStock,
   type PaginaConStock,
 } from "@/lib/usados";
-import { cn } from "@/lib/utils";
 
 /** Sólo las páginas indexables (2 autos o más): no se enlaza a una noindex. */
 async function indexables(): Promise<PaginaConStock[]> {
@@ -69,43 +68,5 @@ export async function BuscaPorFooter() {
         ))}
       </div>
     </div>
-  );
-}
-
-const PARA_LA_HOME = [
-  "camionetas",
-  "suv",
-  "automaticos",
-  "hasta-15-millones",
-  "hasta-20-millones",
-];
-
-/** Home: 6-8 links chicos debajo de los accesos rápidos (3 marcas + tipos + precio). */
-export async function LinksUsadosHome({ className }: { className?: string }) {
-  const paginas = await indexables();
-  const marcas = paginas.filter((p) => p.pagina.tipo === "marca").slice(0, 3);
-  const otras = PARA_LA_HOME.map((s) =>
-    paginas.find((p) => p.pagina.slug === s),
-  ).filter((p): p is PaginaConStock => !!p);
-  const items = [...marcas, ...otras].slice(0, 8);
-  if (items.length === 0) return null;
-  return (
-    <nav aria-label="Buscá por" className={cn("text-sm", className)}>
-      <ul className="flex flex-wrap gap-x-3 gap-y-1.5 text-muted-foreground">
-        {items.map(({ pagina }) => (
-          <li key={pagina.slug}>
-            <Link
-              href={hrefPagina(pagina)}
-              prefetch={false}
-              className="underline-offset-2 hover:text-foreground hover:underline"
-            >
-              {pagina.tipo === "marca"
-                ? `${pagina.marca} usados`
-                : etiquetaLink(pagina)}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
   );
 }

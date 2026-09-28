@@ -1,9 +1,7 @@
 import { conColores } from "@/lib/color-foto";
-import { LinksUsadosHome } from "@/components/links-usados";
 import type { Metadata } from "next";
 import { Hero } from "@/components/hero";
 import { BuscadorCatalogo } from "@/components/catalogo/buscador-catalogo";
-import { AccesosRapidos } from "@/components/catalogo/accesos-rapidos";
 import { filtrosVacios } from "@/lib/filtros";
 import { calcularFacets } from "@/lib/facets";
 import { listaSugerencias } from "@/lib/sugerencias";
@@ -15,7 +13,6 @@ import { JsonLd } from "@/components/json-ld";
 import { jsonLdConcesionaria } from "@/lib/json-ld";
 import {
   getAutosConBaja,
-  hayCeroKm,
   getFacetsBase,
   getDestacados,
   getTotalEnStock,
@@ -42,12 +39,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [destacados, ultimosIngresos, totalEnStock, conBaja, ceroKm, facetRows] = await Promise.all([
+  const [destacados, ultimosIngresos, totalEnStock, conBaja, facetRows] = await Promise.all([
     getDestacados(8).then(conColores),
     getUltimosIngresos(12).then(conColores),
     getTotalEnStock(),
     getAutosConBaja(100),
-    hayCeroKm(),
     getFacetsBase(),
   ]);
 
@@ -58,20 +54,13 @@ export default async function HomePage() {
       <JsonLd data={jsonLd} />
       <Hero />
 
-      {/* Celu: buscador y accesos rápidos a la vista, sin bajar. */}
+      {/* Celu: el buscador a la vista, sin bajar. */}
       <section className="bg-white px-4 pb-4 pt-4 lg:hidden">
         <BuscadorCatalogo
           filtros={filtrosVacios()}
           id="buscador-home"
           sugerencias={listaSugerencias(calcularFacets(facetRows).marcas)}
         />
-        <AccesosRapidos
-          filtros={filtrosVacios()}
-          hayBaja={conBaja.length >= 2}
-          hayCeroKm={ceroKm}
-          className="mt-3"
-        />
-        <LinksUsadosHome className="mt-3" />
       </section>
 
       <section className="bg-zinc-100">

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { guardarEntrada, guardarRecorrido } from "@/lib/recorrido";
+import { borrarRecorridoViejo, guardarEntrada } from "@/lib/recorrido";
 
 /** Precarga sólo con conexión rápida y sin ahorro de datos (Safari no informa: se asume rápida). */
 export function conexionRapida(): boolean {
@@ -24,9 +24,8 @@ const VIGENCIA_PRECARGA_MS = 5 * 60 * 1000;
 
 /**
  * Del listado a la ficha (tanda 40), para todas las cards (a[data-card]):
- * - al tocar una: guarda la entrada (posición si es del listado, foto y
- *   título) y, si es del listado ([data-recorrido]), la lista de slugs en el
- *   orden mostrado para "Anterior / Siguiente" en la ficha;
+ * - al tocar una: guarda la entrada (posición si es del listado
+ *   [data-listado], foto y título);
  * - si la ficha tarda, muestra enseguida la foto de la card (la misma URL,
  *   ya en caché) en el lugar de la galería hasta que llega;
  * - precarga la ficha de las cards que entran en pantalla: como máximo 6 a
@@ -47,6 +46,7 @@ export function TransicionFicha() {
   }, [pathname]);
 
   useEffect(() => {
+    borrarRecorridoViejo();
     function alTocar(e: MouseEvent) {
       if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const objetivo = e.target as Element | null;
@@ -54,7 +54,7 @@ export function TransicionFicha() {
       const card = objetivo.closest<HTMLAnchorElement>("a[data-card]");
       if (!card) return;
       const slug = card.dataset.card ?? "";
-      const lista = card.closest<HTMLElement>("[data-recorrido]");
+      const lista = card.closest<HTMLElement>("[data-listado]");
       const img = card.querySelector("img");
       const foto = img?.currentSrc || img?.src || undefined;
       const titulo = card.querySelector("h3")?.textContent ?? undefined;
@@ -64,12 +64,6 @@ export function TransicionFicha() {
         foto,
         titulo,
       });
-      if (lista) {
-        const slugs = Array.from(lista.querySelectorAll<HTMLAnchorElement>("a[data-card]")).map(
-          (a) => a.dataset.card ?? ""
-        );
-        guardarRecorrido(slugs, lista.dataset.recorrido ?? "");
-      }
       // Si la ficha ya estaba precargada la navegación es instantánea y la
       // foto ni llega a mostrarse; si tarda, aparece a los 120 ms.
       timers.current.push(window.setTimeout(() => setTocada({ foto, titulo }), 120));

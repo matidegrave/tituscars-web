@@ -16,7 +16,6 @@ import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdAuto } from "@/lib/json-ld";
 import { TrackVistaAuto } from "@/components/tracking/track-vista-auto";
-import { NavegacionFicha } from "@/components/ficha/navegacion-ficha";
 import { CalendarDays, Car, Fuel, Gauge, Settings2 } from "lucide-react";
 import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
@@ -103,9 +102,8 @@ export default async function FichaAutoPage({
   const jsonLd = jsonLdAuto(auto);
 
   return (
-    <div className="relative mx-auto max-w-6xl px-4 py-8 pb-28 sm:pb-8">
+    <div className="mx-auto max-w-6xl px-4 py-8 pb-28 sm:pb-8">
       <JsonLd data={jsonLd} />
-      <NavegacionFicha slug={auto.slug} />
       <TrackVistaAuto
         datos={{
           auto_id: auto.id,
@@ -128,7 +126,7 @@ export default async function FichaAutoPage({
           />
         </div>
 
-        <div id="ficha-datos" className="flex flex-col gap-6 lg:col-span-2">
+        <div className="flex flex-col gap-6 lg:col-span-2">
           <div>
             <h1 className="text-2xl font-bold uppercase tracking-tight">{titulo}</h1>
             <p className="text-muted-foreground">{auto.anio}</p>
@@ -203,9 +201,11 @@ export default async function FichaAutoPage({
             }}
             intenciones={[
               {
-                texto: "¿Está disponible?",
-                detalle: "disponible",
-                href: linkWhatsapp(`Hola, ¿sigue disponible el ${titulo} ${auto.anio}? ${urlFicha}`),
+                texto: "Tengo un auto para entregar",
+                detalle: "permuta",
+                href: linkWhatsapp(
+                  `Hola, me interesa el ${titulo} ${auto.anio} y tengo un auto para entregar: ${urlFicha}`
+                ),
               },
               {
                 texto: "Quiero financiarlo",
@@ -215,11 +215,9 @@ export default async function FichaAutoPage({
                 ),
               },
               {
-                texto: "Tengo un auto para entregar",
-                detalle: "permuta",
-                href: linkWhatsapp(
-                  `Hola, me interesa el ${titulo} ${auto.anio} y tengo un auto para entregar: ${urlFicha}`
-                ),
+                texto: "¡Me interesa!",
+                detalle: "interesa",
+                href: linkWhatsapp(`Hola, me interesa el ${titulo} ${auto.anio} (${precioFormateado}). ${urlFicha}`),
               },
             ]}
             hrefWhatsapp={linkWhatsapp(

@@ -18,13 +18,10 @@ import { jsonLdListaAutos } from "@/lib/json-ld";
 import { redirect } from "next/navigation";
 import {
   getAnios,
-  getAutosConBaja,
   getAutosPaginados,
   getFacetsBase,
   getUltimosIngresos,
-  hayCeroKm,
 } from "@/lib/autos";
-import { AccesosRapidos } from "@/components/catalogo/accesos-rapidos";
 import { SinResultados } from "@/components/catalogo/sin-resultados";
 import { TrackBusqueda } from "@/components/catalogo/track-busqueda";
 import {
@@ -87,12 +84,10 @@ export default async function CatalogoPage({
 
   const claveFiltros = filtrosAParams(filtros).toString();
 
-  const [facetRows, anios, resultado, conBaja, ceroKm] = await Promise.all([
+  const [facetRows, anios, resultado] = await Promise.all([
     getFacetsBase(),
     getAnios(),
     getAutosPaginados(filtros).then(async (r) => ({ ...r, autos: await conColores(r.autos) })),
-    getAutosConBaja(2),
-    hayCeroKm(),
   ]);
 
   const { marcas, hayTransmision, hayCarroceria } = calcularFacets(facetRows);
@@ -189,13 +184,6 @@ export default async function CatalogoPage({
                 <OrdenSelect filtros={filtros} className="bg-background" />
               </div>
             </BarraCatalogoCelu>
-
-            <AccesosRapidos
-              filtros={filtros}
-              hayBaja={conBaja.length >= 2}
-              hayCeroKm={ceroKm}
-              className="mt-4"
-            />
 
             {/* Destino del scroll al buscar (debajo del header fijo). */}
             <div

@@ -33,6 +33,7 @@ const DETALLES = new Set([
   "disponible",
   "financiar",
   "permuta",
+  "interesa",
   "aviso_sin_stock",
   "favoritos",
   "agregar",

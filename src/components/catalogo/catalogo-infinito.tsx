@@ -142,8 +142,8 @@ export function CatalogoInfinito({
 
   return (
     <>
-      {/* data-recorrido: la ficha arma "Anterior / Siguiente" con este orden (TransicionFicha). */}
-      <div onClickCapture={guardar} data-recorrido={claveFiltros}>
+      {/* data-listado: vista_auto lleva la posición de la card tocada (TransicionFicha). */}
+      <div onClickCapture={guardar} data-listado>
         <AutoGrid autos={autos} prioridadPrimera />
       </div>
 

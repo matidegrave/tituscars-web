@@ -1,22 +1,12 @@
 /**
- * Del listado a la ficha (tanda 40), todo en sessionStorage con try/catch:
- * - recorrido: los slugs en el orden en que se mostraban (con su clave de
- *   filtros), para "‹ Anterior · 3 de 23 · Siguiente ›" en la ficha;
- * - entrada: la card tocada (posición, foto y título), para medir la
- *   posición en vista_auto y mostrar la foto al instante.
+ * Del listado a la ficha (tanda 40), en sessionStorage con try/catch: la
+ * card tocada (posición, foto y título), para medir la posición en
+ * vista_auto y mostrar la foto al instante.
+ * (La lista para "Anterior / Siguiente" se sacó en la tanda 43.)
  */
 
-const CLAVE_RECORRIDO = "tc_recorrido";
 const CLAVE_ENTRADA = "tc_entrada_ficha";
-const VIGENCIA_RECORRIDO_MS = 60 * 60 * 1000;
 const VIGENCIA_ENTRADA_MS = 60 * 1000;
-
-export interface Recorrido {
-  slugs: string[];
-  /** filtrosAParams(...).toString() del listado. */
-  clave: string;
-  ts: number;
-}
 
 export interface EntradaFicha {
   slug: string;
@@ -27,20 +17,12 @@ export interface EntradaFicha {
   ts: number;
 }
 
-export function guardarRecorrido(slugs: string[], clave: string) {
+/** Borra la lista de "Anterior / Siguiente" que guardaba la tanda 40. */
+export function borrarRecorridoViejo() {
   try {
-    sessionStorage.setItem(CLAVE_RECORRIDO, JSON.stringify({ slugs, clave, ts: Date.now() } satisfies Recorrido));
+    sessionStorage.removeItem("tc_recorrido");
   } catch {
-    // sin sessionStorage: la ficha no muestra anterior/siguiente
-  }
-}
-
-export function leerRecorrido(): Recorrido | null {
-  try {
-    const r = JSON.parse(sessionStorage.getItem(CLAVE_RECORRIDO) ?? "null") as Recorrido | null;
-    return r && Array.isArray(r.slugs) && Date.now() - r.ts < VIGENCIA_RECORRIDO_MS ? r : null;
-  } catch {
-    return null;
+    // nada
   }
 }
 

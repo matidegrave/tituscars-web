@@ -107,16 +107,6 @@ export async function contarAutos(filtros: Filtros): Promise<number> {
   return count ?? 0;
 }
 
-/** ¿Hay algún 0 KM en stock? (acceso rápido "0 KM"). */
-export async function hayCeroKm(): Promise<boolean> {
-  const { count } = await supabase
-    .from(TABLA)
-    .select("id", { count: "exact", head: true })
-    .neq("estado", "senado")
-    .eq("condicion", "0km");
-  return (count ?? 0) > 0;
-}
-
 export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCatalogo> {
   let query = conFiltros(
     supabase.from(TABLA).select("*", { count: "exact" }).neq("estado", "senado"),

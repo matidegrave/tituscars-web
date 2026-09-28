@@ -38,7 +38,7 @@ export interface DatosEvento {
   /** vista_auto desde el listado: posición de la card tocada (1 = primera). */
   posicion?: number;
   /**
-   * Subtipo. click_whatsapp: consulta | disponible | financiar | permuta |
+   * Subtipo. click_whatsapp: consulta | interesa | financiar | permuta |
    * aviso_sin_stock | favoritos. favorito: agregar | quitar.
    */
   detalle?: string;
