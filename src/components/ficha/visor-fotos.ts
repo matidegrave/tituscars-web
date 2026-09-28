@@ -45,8 +45,10 @@ export async function abrirVisorFotos({
 
   const pswp = new PhotoSwipe({
     dataSource: urls.map((url, i) => ({
-      src: optimizada(url, 1920),
-      srcset: `${optimizada(url, 1080)} 1080w, ${optimizada(url, 1920)} 1920w`,
+      // Los mismos anchos que el resto de la web (next.config deviceSizes): así
+      // el visor reusa las variantes ya optimizadas y no genera otras.
+      src: optimizada(url, 1080),
+      srcset: `${optimizada(url, 828)} 828w, ${optimizada(url, 1080)} 1080w`,
       width: ANCHO,
       height: ALTO,
       alt,

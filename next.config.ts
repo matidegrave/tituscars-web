@@ -44,16 +44,26 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
   },
   images: {
-    // AVIF primero (el navegador que no lo acepta recibe WebP). Next escala
-    // la calidad para AVIF (q * 50/80: q75 -> AVIF 47) de modo que se vea
-    // como el WebP de la misma q: las fotos quedan en q75 (la de siempre) y
-    // pesan ~45% menos. Bajar la q a 50 en AVIF ya se nota (ripio, patentes).
-    formats: ["image/avif", "image/webp"],
-    // Next 16 solo acepta las calidades de esta lista (por defecto [75]); una
-    // que no esté se sirve con la más cercana.
-    qualities: [50, 75],
-    // 160: miniaturas de 80 px en pantallas 2x (sin esto pedían 256).
-    imageSizes: [16, 32, 48, 64, 96, 128, 160, 256, 384],
+    // Consumo de Image Optimization (se cobra por transformación y por
+    // escritura en caché): cada combinación foto x ancho x formato x calidad
+    // es una transformación, así que se usan las menos posibles.
+    // - Sólo AVIF: una variante por ancho. El navegador que no acepta AVIF
+    //   recibe la foto en su formato original (JPG), redimensionada.
+    //   Next escala la calidad para AVIF (q75 -> AVIF 47), que se ve como el
+    //   WebP q75 de antes y pesa ~45% menos.
+    formats: ["image/avif"],
+    // Una sola calidad (también las miniaturas).
+    qualities: [75],
+    // Sólo los anchos que la web usa de verdad: fotos de ficha/cards/hero
+    // (640, 828, 1080; celu 3x y compu toman 1080) y chicas (miniaturas de
+    // 80 px -> 160/256; cards en compu -> 384). El visor usa 828 y 1080.
+    deviceSizes: [640, 828, 1080],
+    imageSizes: [96, 160, 256, 384],
+    // Las fotos de Supabase vienen con Cache-Control: no-cache, así que el
+    // default de Next (4 h) las re-transformaba varias veces por día. 31 días:
+    // una foto optimizada no se regenera (las fotos no cambian: al editar un
+    // auto se suben con otro nombre).
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       {
         protocol: "https",
@@ -61,9 +71,8 @@ const nextConfig: NextConfig = {
         pathname: "/storage/v1/object/public/**",
       },
     ],
-    dangerouslyAllowSVG: true,
-    contentDispositionType: "inline",
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Sin dangerouslyAllowSVG: los logos .svg se sirven directo (unoptimized
+    // automático), sin pasar por el optimizador.
   },
   // Las redirecciones (URLs viejas de Tienda Nube, prefijos de idioma, barra
   // final y *.vercel.app -> tituscars.com) viven en src/proxy.ts: los

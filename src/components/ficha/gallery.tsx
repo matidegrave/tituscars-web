@@ -161,14 +161,13 @@ export function FichaGallery({
                 i === activo ? "border-primary" : "border-transparent"
               }`}
             >
-              {/* Miniatura de 80px: se pide chica y en calidad baja. Las
+              {/* Miniatura de 80px: se pide chica (160/256 según la pantalla). Las
                   primeras 5 (las que se ven al entrar) sin esperar al lazy. */}
               <Image
                 src={foto.url}
                 alt=""
                 fill
                 sizes="80px"
-                quality={50}
                 loading={i < 5 ? "eager" : "lazy"}
                 fetchPriority="low"
                 className="object-cover"
