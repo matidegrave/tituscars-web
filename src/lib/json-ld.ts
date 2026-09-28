@@ -7,12 +7,10 @@ import {
   DIRECCION_CALLE,
   DIRECCION_LOCALIDAD,
   FACEBOOK_URL,
-  GOOGLE_PUNTAJE,
   HORARIOS_SCHEMA,
   INSTAGRAM_URL,
   LINKTREE_URL,
   MERCADOLIBRE_URL,
-  RESENAS_CANTIDAD,
   RESENAS_URL,
   SITE_URL,
   TIKTOK_URL,
@@ -109,11 +107,8 @@ export function jsonLdConcesionaria(): JsonLdObjeto {
   return {
     "@context": "https://schema.org",
     ...datosConcesionaria(),
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: Number(GOOGLE_PUNTAJE.replace(",", ".")),
-      reviewCount: RESENAS_CANTIDAD,
-    },
+    // Sin aggregateRating: Google no acepta la calificación que un negocio
+    // publica sobre sí mismo en su propia página (spam de datos estructurados).
     openingHoursSpecification: HORARIOS_SCHEMA.map((h) => ({
       "@type": "OpeningHoursSpecification",
       dayOfWeek: h.dayOfWeek,

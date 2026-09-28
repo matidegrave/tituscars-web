@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { FooterWhatsapp } from "@/components/footer-whatsapp";
 import {
+  GOOGLE_PUNTAJE,
+  RESENAS_CANTIDAD,
   RESENAS_URL,
   INSTAGRAM_URL,
   TIKTOK_URL,
@@ -91,7 +93,7 @@ export function SiteFooter() {
             className="mt-4 inline-flex items-center gap-1.5 text-sm text-white/70 hover:text-brand"
           >
             <StarIcon className="h-4 w-4" />
-            Ver reseñas en Google
+            {GOOGLE_PUNTAJE} ★ · {RESENAS_CANTIDAD} reseñas en Google
           </a>
         </div>
       </div>

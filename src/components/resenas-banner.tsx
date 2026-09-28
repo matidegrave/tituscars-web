@@ -3,18 +3,15 @@ import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GOOGLE_PUNTAJE, RESENAS_CANTIDAD, RESENAS_URL } from "@/lib/config";
 import { RESENAS_DESTACADAS } from "@/lib/resenas";
+import { EstrellasPuntaje } from "@/components/estrellas-puntaje";
 
 export function ResenasBanner() {
   return (
     <section className="bg-brand-light py-16">
       <div className="mx-auto flex max-w-6xl flex-col items-center px-4 text-center">
-        <div className="flex gap-1">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} className="h-6 w-6 fill-brand text-brand" />
-          ))}
-        </div>
+        <EstrellasPuntaje puntaje={GOOGLE_PUNTAJE} />
         <h2 className="mt-3 text-2xl font-bold tracking-tight">{GOOGLE_PUNTAJE} en Google</h2>
-        <p className="mt-1 text-brand-gray">{RESENAS_CANTIDAD} reseñas de clientes</p>
+        <p className="mt-1 text-brand-gray">{RESENAS_CANTIDAD} reseñas en Google</p>
 
         {RESENAS_DESTACADAS.length > 0 && (
           <div className="mt-10 grid w-full grid-cols-1 gap-5 text-left sm:grid-cols-2 lg:grid-cols-3">

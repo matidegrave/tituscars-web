@@ -54,12 +54,18 @@ export const TELEFONO_DISPLAY = "+54 9 351 328-3316";
 // Horarios de atención (/contacto y el JSON-LD AutoDealer). El texto libre es
 // lo que se muestra; el array de abajo es la MISMA info en el formato que
 // pide schema.org para el JSON-LD — si HORARIOS cambia, actualizar los dos.
-export const HORARIOS = "Lunes a viernes 9 a 18 hs · Sábados 9 a 13 hs";
+// Lunes a viernes cortan al mediodía (dos bloques); domingo cerrado (no va).
+export const HORARIOS = "Lunes a viernes 9 a 13 y 15 a 19 hs · Sábados 9 a 13 hs";
 export const HORARIOS_SCHEMA: { dayOfWeek: string[]; opens: string; closes: string }[] = [
   {
     dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     opens: "09:00",
-    closes: "18:00",
+    closes: "13:00",
+  },
+  {
+    dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    opens: "15:00",
+    closes: "19:00",
   },
   { dayOfWeek: ["Saturday"], opens: "09:00", closes: "13:00" },
 ];
