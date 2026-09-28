@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { bajaDePrecio, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
 import { PastillaDisponibilidad } from "@/components/pastilla-disponibilidad";
-import { BotonFavorito } from "@/components/favoritos/boton-favorito";
+import { ExtrasCard } from "@/components/vendedor/herramientas-card";
+import { datosParaCliente } from "@/lib/para-cliente";
 import type { AutoCatalogo } from "@/lib/types";
 
 function lineaDatos(auto: AutoCatalogo): string {
@@ -32,8 +33,8 @@ export function AutoCard({
 }) {
   const baja = bajaDePrecio(auto);
   const precio = formatPrecio(auto.precio, auto.moneda);
-  // El corazón va afuera del <Link> (un botón dentro de un link no es válido),
-  // superpuesto a la esquina de la foto.
+  // El corazón (y, en modo equipo, las herramientas de vendedor) van afuera
+  // del <Link>: un botón dentro de un link no es válido.
   return (
     <div className="relative flex flex-col">
       <Link
@@ -105,19 +106,17 @@ export function AutoCard({
           )}
         </div>
       </Link>
-      <div className="pointer-events-none absolute inset-x-px top-px aspect-[4/3]">
-        <BotonFavorito
-          className="pointer-events-auto absolute bottom-2 right-2"
-          auto={{
-            id: auto.id,
-            slug: auto.slug,
-            titulo: tituloAuto(auto),
-            anio: auto.anio,
-            precio,
-            foto: auto.foto_principal,
-          }}
-        />
-      </div>
+      <ExtrasCard
+        auto={{
+          id: auto.id,
+          slug: auto.slug,
+          titulo: tituloAuto(auto),
+          anio: auto.anio,
+          precio,
+          datos: datosParaCliente(auto),
+          foto: auto.foto_principal,
+        }}
+      />
     </div>
   );
 }

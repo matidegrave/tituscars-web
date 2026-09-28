@@ -9,6 +9,8 @@ import { GOOGLE_PUNTAJE, RESENAS_CANTIDAD, RESENAS_URL } from "@/lib/config";
 import { track } from "@/lib/tracking";
 import { BotonFavorito } from "@/components/favoritos/boton-favorito";
 import type { Favorito } from "@/lib/favoritos";
+import { CopiarFicha } from "@/components/vendedor/herramientas-card";
+import type { AutoParaCliente } from "@/lib/para-cliente";
 
 /** true si copió el link (sin share nativo); false si usó el share o falló. */
 async function compartir(titulo: string): Promise<boolean> {
@@ -42,6 +44,7 @@ export function WhatsappCta({
   intenciones,
   trackAuto,
   favorito,
+  paraCliente,
 }: {
   titulo: string;
   precioFormateado: string;
@@ -52,6 +55,8 @@ export function WhatsappCta({
   trackAuto: { auto_id: string; slug: string; valor: number };
   /** Datos para guardarlo en favoritos (corazón al lado de compartir). */
   favorito: Omit<Favorito, "ts">;
+  /** "Copiar para cliente" (sólo se ve en modo equipo). */
+  paraCliente: AutoParaCliente;
 }) {
   // "Link copiado" en el mismo botón (antes era un toast: el Toaster sumaba
   // ~9 KB de JS a todas las páginas sólo para este aviso).
@@ -113,6 +118,7 @@ export function WhatsappCta({
         </button>
         <BotonFavorito auto={favorito} variante="ficha" />
       </div>
+      <CopiarFicha auto={paraCliente} />
 
       {/* Consultas con intención: mensaje prearmado según lo que quiere saber. */}
       <div className="-mt-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">

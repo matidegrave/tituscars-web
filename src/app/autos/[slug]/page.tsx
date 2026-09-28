@@ -6,6 +6,7 @@ import type { AutoCatalogo } from "@/lib/types";
 import { bajaDePrecio, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
 import { FichaGallery } from "@/components/ficha/gallery";
 import { coloresDeFotos, conColores } from "@/lib/color-foto";
+import { datosParaCliente } from "@/lib/para-cliente";
 import { FichaTecnica } from "@/components/ficha/ficha-tecnica";
 import { WhatsappCta } from "@/components/ficha/whatsapp-bar";
 import { Descripcion } from "@/components/ficha/descripcion";
@@ -192,6 +193,13 @@ export default async function FichaAutoPage({
               anio: auto.anio,
               precio: precioFormateado,
               foto: auto.foto_principal,
+            }}
+            paraCliente={{
+              slug: auto.slug,
+              titulo,
+              anio: auto.anio,
+              datos: datosParaCliente(auto),
+              precio: precioFormateado,
             }}
             intenciones={[
               {

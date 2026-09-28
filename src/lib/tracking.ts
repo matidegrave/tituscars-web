@@ -83,7 +83,7 @@ declare global {
  * se crea window.fbq y track() no le manda nada a Meta.
  */
 export const SNIPPET_PIXEL = (id: string) =>
-  `if(location.hostname==='${HOST_PIXEL}'&&!function(){try{return/(?:^|;\\s*)tc_equipo=1(?:;|$)/.test(document.cookie)||localStorage.getItem('tc_equipo')==='1'}catch(x){return!1}}()){!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];var c=!1;f.__cargarPixel=function(){if(c)return;c=!0;var t=b.createElement(e);t.async=!0;t.src=v;var s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)};f.addEventListener('load',function(){setTimeout(f.__cargarPixel,0)})}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${id}');fbq('track','PageView')}`;
+  `if(location.hostname==='${HOST_PIXEL}'&&!function(){try{return/(?:^|;\\s*)tc_equipo=1(?:\\.[a-z]{1,20})?(?:;|$)/.test(document.cookie)||/^1(?:\\.[a-z]{1,20})?$/.test(localStorage.getItem('tc_equipo')||'')}catch(x){return!1}}()){!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];var c=!1;f.__cargarPixel=function(){if(c)return;c=!0;var t=b.createElement(e);t.async=!0;t.src=v;var s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)};f.addEventListener('load',function(){setTimeout(f.__cargarPixel,0)})}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${id}');fbq('track','PageView')}`;
 
 /** Descarga fbevents.js (una sola vez). La llama <MetaPixel /> al hidratar. */
 export function cargarPixel() {

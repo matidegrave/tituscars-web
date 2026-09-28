@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE_EQUIPO, UN_ANIO_S } from "@/lib/equipo";
+import { COOKIE_EQUIPO, UN_ANIO_S, valorEquipo } from "@/lib/equipo";
 
 /**
  * Router de la web antes de renderizar. En orden:
@@ -180,12 +180,15 @@ export async function proxy(request: NextRequest) {
   // año, ?equipo=0 la saca. Vuelve a la misma URL sin el parámetro (307: es
   // un paso técnico, no una URL que tenga que indexarse). La cookie se puede
   // leer desde el navegador para no cargar el Pixel ni mandar eventos.
+  // ?equipo=1&v=luca guarda también el vendedor ("1.luca", ver lib/equipo.ts).
   const equipo = request.nextUrl.searchParams.get("equipo");
   if (equipo === "1" || equipo === "0") {
     const limpia = new URL(request.url);
     limpia.searchParams.delete("equipo");
+    const vendedor = limpia.searchParams.get("v");
+    limpia.searchParams.delete("v");
     const respuesta = NextResponse.redirect(limpia, 307);
-    respuesta.cookies.set(COOKIE_EQUIPO, equipo, {
+    respuesta.cookies.set(COOKIE_EQUIPO, equipo === "1" ? valorEquipo(vendedor) : "0", {
       // "0" vive un rato: le avisa al navegador que borre el respaldo de localStorage.
       maxAge: equipo === "1" ? UN_ANIO_S : 300,
       path: "/",

@@ -12,7 +12,8 @@ import { MetaPixel } from "@/components/tracking/meta-pixel";
 import { ModoEquipo } from "@/components/modo-equipo";
 import { WhatsappEnApps } from "@/components/whatsapp-en-apps";
 import { TransicionFicha } from "@/components/catalogo/transicion-ficha";
-import { COOKIE_EQUIPO } from "@/lib/equipo";
+import { BarraSeleccion } from "@/components/vendedor/barra-seleccion";
+import { COOKIE_EQUIPO, esValorEquipo } from "@/lib/equipo";
 import { SCRIPT_REPORTE_ERRORES } from "@/lib/reporte-errores-script";
 import { PIXEL_ID, SNIPPET_PIXEL } from "@/lib/tracking";
 import { SITE_URL } from "@/lib/config";
@@ -60,7 +61,7 @@ const pixelDeProduccion = Boolean(PIXEL_ID) && process.env.VERCEL_ENV === "produ
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Con la marca de equipo (lib/equipo.ts) no va el Pixel. El snippet igual lo
   // vuelve a chequear en el navegador (cookie o respaldo en localStorage).
-  const equipo = (await cookies()).get(COOKIE_EQUIPO)?.value === "1";
+  const equipo = esValorEquipo((await cookies()).get(COOKIE_EQUIPO)?.value);
   const pixelActivo = pixelDeProduccion && !equipo;
   return (
     <html
@@ -90,6 +91,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <WhatsappEnApps />
         <TransicionFicha />
         <ModoEquipo />
+        <BarraSeleccion />
         {pixelActivo && (
           <noscript>
             {/* eslint-disable-next-line @next/next/no-img-element */}
