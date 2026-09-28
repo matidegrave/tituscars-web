@@ -38,24 +38,15 @@ const UTM = [
   "utm_term",
 ];
 
-type Estilo = "naranja" | "verde";
+type Estilo = "naranja" | "verde" | "borde";
 
 const ESTILOS: Record<Estilo, string> = {
   naranja: "bg-brand text-white hover:bg-brand-dark",
   verde: "bg-[#25D366] text-white hover:bg-[#1ebe5a]",
+  // Blanco con borde naranja; al pasar el mouse o tocarlo, naranja suave.
+  borde:
+    "border-2 border-brand bg-white text-brand hover:bg-[#FFE8DC] active:bg-[#FFE8DC] focus-visible:bg-[#FFE8DC] focus-visible:outline-none",
 };
-
-/**
- * Logo a color dentro de un círculo blanco (mismo tamaño que el isologo de
- * "Ver catálogo"), así se lee sobre el naranja.
- */
-function EnCirculo({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white">
-      {children}
-    </span>
-  );
-}
 
 interface Boton {
   texto: string;
@@ -83,7 +74,6 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
   };
 
   const icono = "h-7 w-7";
-  const logo = "h-[18px] w-[18px]";
   const botones: Boton[] = [
     {
       texto: "Ver catálogo",
@@ -108,46 +98,30 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
     {
       texto: "Ubicación",
       href: MAPS_COMO_LLEGAR,
-      estilo: "naranja",
-      icono: (
-        <EnCirculo>
-          <GoogleMapsIcon className={logo} />
-        </EnCirculo>
-      ),
+      estilo: "borde",
+      icono: <GoogleMapsIcon className="h-6 w-6" />,
       externo: true,
     },
     {
       texto: "Reseñas",
       href: RESENAS_URL,
-      estilo: "naranja",
-      icono: (
-        <EnCirculo>
-          <GoogleMapsIcon className={logo} />
-        </EnCirculo>
-      ),
+      estilo: "borde",
+      icono: <GoogleMapsIcon className="h-6 w-6" />,
       externo: true,
       extra: `${GOOGLE_PUNTAJE} ★`,
     },
     {
       texto: "Conocenos en Instagram",
       href: INSTAGRAM_URL,
-      estilo: "naranja",
-      icono: (
-        <EnCirculo>
-          <InstagramColorIcon className={logo} />
-        </EnCirculo>
-      ),
+      estilo: "borde",
+      icono: <InstagramColorIcon className="h-6 w-6" />,
       externo: true,
     },
     {
       texto: "Conocenos en TikTok",
       href: TIKTOK_URL,
-      estilo: "naranja",
-      icono: (
-        <EnCirculo>
-          <TikTokColorIcon className={logo} />
-        </EnCirculo>
-      ),
+      estilo: "borde",
+      icono: <TikTokColorIcon className="h-6 w-6" />,
       externo: true,
     },
   ];
@@ -181,7 +155,7 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
               {...(b.externo
                 ? { target: "_blank", rel: "noopener noreferrer" }
                 : {})}
-              className={`relative flex min-h-14 w-full items-center justify-center rounded-xl px-11 py-3 text-center text-[15px] font-semibold sm:px-14 sm:text-base shadow-sm transition-colors ${ESTILOS[b.estilo]}`}
+              className={`relative flex min-h-14 w-full items-center justify-center rounded-xl px-11 py-3 text-center text-[15px] font-semibold sm:px-14 sm:text-base shadow-sm motion-safe:transition-colors motion-safe:duration-150 ${ESTILOS[b.estilo]}`}
             >
               {/* Ícono a la izquierda y texto centrado en todo el ancho. */}
               <span className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center">
@@ -189,7 +163,7 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
               </span>
               {b.texto}
               {b.extra && (
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-white">
+                <span className={`absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold ${b.estilo === "borde" ? "text-brand" : "text-white"}`}>
                   {b.extra}
                 </span>
               )}
