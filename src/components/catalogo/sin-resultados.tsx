@@ -1,0 +1,60 @@
+import Link from "next/link";
+import { AutoGrid } from "@/components/auto-grid";
+import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
+import type { AutoCatalogo } from "@/lib/types";
+
+/**
+ * Búsqueda sin resultados: nunca pantalla vacía. "¿Quisiste decir…?" si hay
+ * una marca/modelo parecido en stock, "Hoy no tenemos {lo buscado}", el botón
+ * para que el cliente nos escriba (WhatsApp de ventas; nosotros no escribimos
+ * primero) y hasta 8 autos parecidos.
+ */
+export function SinResultados({
+  buscado,
+  sugerencia,
+  parecidos,
+  hrefAviso,
+}: {
+  buscado: string;
+  sugerencia: { texto: string; href: string } | null;
+  parecidos: AutoCatalogo[];
+  hrefAviso: string;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      {sugerencia && (
+        <p className="text-base">
+          ¿Quisiste decir{" "}
+          <Link href={sugerencia.href} className="font-semibold text-brand underline underline-offset-2">
+            {sugerencia.texto}
+          </Link>
+          ?
+        </p>
+      )}
+      <div className="rounded-xl border border-zinc-200 bg-white p-5 text-center shadow-sm sm:text-left">
+        <h2 className="text-xl font-bold tracking-tight">Hoy no tenemos {buscado}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Entran autos todas las semanas. Escribinos y te avisamos cuando llegue uno.
+        </p>
+        <a
+          href={hrefAviso}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-track-detalle="aviso_sin_stock"
+          className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 text-base font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto"
+        >
+          <WhatsappIcon className="h-5 w-5" />
+          Avisame cuando entre uno
+        </a>
+      </div>
+      {parecidos.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold">Estos se le parecen</h3>
+          <div className="mt-4">
+            <AutoGrid autos={parecidos} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -14,6 +14,7 @@ import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdAuto } from "@/lib/json-ld";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
+import { CalendarDays, Car, Fuel, Gauge, Settings2 } from "lucide-react";
 import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
 import { linkWhatsapp, mensajeConsultaAuto } from "@/lib/whatsapp";
@@ -131,6 +132,37 @@ export default async function FichaAutoPage({
               {precioFormateado}
             </p>
             {baja && <p className="mt-1 text-sm font-medium text-emerald-700">Bajó de precio</p>}
+            {/* Datos clave de un vistazo (la ficha técnica completa sigue abajo). */}
+            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-foreground/80">
+              <li className="flex items-center gap-1.5">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                {auto.anio}
+              </li>
+              {auto.km !== null && (
+                <li className="flex items-center gap-1.5">
+                  <Gauge className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {formatKm(auto.km)}
+                </li>
+              )}
+              {auto.combustible && (
+                <li className="flex items-center gap-1.5">
+                  <Fuel className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {auto.combustible}
+                </li>
+              )}
+              {auto.transmision && (
+                <li className="flex items-center gap-1.5">
+                  <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {auto.transmision === "manual" ? "Manual" : "Automática"}
+                </li>
+              )}
+              {auto.carroceria && (
+                <li className="flex items-center gap-1.5">
+                  <Car className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {auto.carroceria === "suv" ? "SUV" : auto.carroceria.charAt(0).toUpperCase() + auto.carroceria.slice(1)}
+                </li>
+              )}
+            </ul>
             <p className="mt-2 text-sm text-muted-foreground">
               {auto.disponibilidad === "salon"
                 ? `Disponible en nuestro salón, ${DIRECCION_CALLE}`
@@ -147,6 +179,27 @@ export default async function FichaAutoPage({
             titulo={titulo}
             trackAuto={{ auto_id: auto.id, slug: auto.slug, valor: auto.precio_ars }}
             precioFormateado={precioFormateado}
+            intenciones={[
+              {
+                texto: "¿Está disponible?",
+                detalle: "disponible",
+                href: linkWhatsapp(`Hola, ¿sigue disponible el ${titulo} ${auto.anio}? ${urlFicha}`),
+              },
+              {
+                texto: "Quiero financiarlo",
+                detalle: "financiar",
+                href: linkWhatsapp(
+                  `Hola, me interesa financiar el ${titulo} ${auto.anio} (${precioFormateado}). ¿Qué opciones tengo? ${urlFicha}`
+                ),
+              },
+              {
+                texto: "Tengo un auto para entregar",
+                detalle: "permuta",
+                href: linkWhatsapp(
+                  `Hola, me interesa el ${titulo} ${auto.anio} y tengo un auto para entregar: ${urlFicha}`
+                ),
+              },
+            ]}
             hrefWhatsapp={linkWhatsapp(
               mensajeConsultaAuto({
                 titulo,

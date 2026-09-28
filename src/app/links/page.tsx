@@ -19,6 +19,7 @@ import {
   TitusIsologo,
 } from "@/components/icons/marcas";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
+import { AvisoHorario } from "@/components/aviso-horario";
 import { navegadorDeApp } from "@/lib/whatsapp-apps";
 
 // /links: la página de la bio de Instagram y TikTok (reemplaza al Linktree).
@@ -230,6 +231,7 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
           ))}
         </nav>
 
+        <AvisoHorario className="mt-4 text-center" />
         <p className="mt-6 text-center text-xs text-muted-foreground">
           {DIRECCION}
         </p>

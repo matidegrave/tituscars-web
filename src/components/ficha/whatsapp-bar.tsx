@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { Check, Share2 } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
+import { EstrellasPuntaje } from "@/components/estrellas-puntaje";
+import { AvisoHorario } from "@/components/aviso-horario";
+import { GOOGLE_PUNTAJE, RESENAS_CANTIDAD, RESENAS_URL } from "@/lib/config";
 import { track } from "@/lib/tracking";
 
 /** true si copió el link (sin share nativo); false si usó el share o falló. */
@@ -34,11 +37,14 @@ export function WhatsappCta({
   titulo,
   precioFormateado,
   hrefWhatsapp,
+  intenciones,
   trackAuto,
 }: {
   titulo: string;
   precioFormateado: string;
   hrefWhatsapp: string;
+  /** Consultas con intención (disponible / financiar / permuta), al WhatsApp de ventas. */
+  intenciones: { texto: string; href: string; detalle: string }[];
   /** Datos del auto para el click_whatsapp / Lead (los lee MetaPixel del link). */
   trackAuto: { auto_id: string; slug: string; valor: number };
 }) {
@@ -63,10 +69,22 @@ export function WhatsappCta({
 
   return (
     <>
+      <a
+        href={RESENAS_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="-mb-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <EstrellasPuntaje puntaje={GOOGLE_PUNTAJE} estrellaClassName="h-4 w-4" className="gap-0.5" />
+        <span>
+          {GOOGLE_PUNTAJE} · {RESENAS_CANTIDAD} reseñas en Google
+        </span>
+      </a>
       <div className="flex gap-2">
         <a
           href={hrefWhatsapp}
           {...datosTrack}
+          data-track-detalle="consulta"
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-[#25D366] text-base font-semibold text-white transition-opacity hover:opacity-90"
@@ -90,11 +108,30 @@ export function WhatsappCta({
         </button>
       </div>
 
+      {/* Consultas con intención: mensaje prearmado según lo que quiere saber. */}
+      <div className="-mt-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+        {intenciones.map((i) => (
+          <a
+            key={i.detalle}
+            href={i.href}
+            {...datosTrack}
+            data-track-detalle={i.detalle}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 whitespace-nowrap rounded-lg border border-[#25D366] px-3.5 py-2 text-sm font-semibold text-[#1a9e4b] transition-colors hover:bg-[#25D366]/10"
+          >
+            {i.texto}
+          </a>
+        ))}
+      </div>
+      <AvisoHorario className="-mt-3" />
+
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden">
         <span className="text-lg font-black">{precioFormateado}</span>
         <a
           href={hrefWhatsapp}
           {...datosTrack}
+          data-track-detalle="consulta"
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-11 flex-1 max-w-[65%] items-center justify-center gap-2 rounded-lg bg-[#25D366] text-sm font-semibold text-white"

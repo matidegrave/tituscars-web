@@ -23,6 +23,22 @@ const texto = (v: unknown, max: number): string | null => {
   return t ? t.slice(0, max) : null;
 };
 
+/** Entero dentro del rango de la columna (smallint con CHECK), o null. */
+const entero = (v: unknown, min: number, max: number): number | null =>
+  typeof v === "number" && Number.isInteger(v) && v >= min && v <= max ? v : null;
+
+/** Valores válidos de web_eventos.detalle (ver DatosEvento en lib/tracking.ts). */
+const DETALLES = new Set([
+  "consulta",
+  "disponible",
+  "financiar",
+  "permuta",
+  "aviso_sin_stock",
+  "favoritos",
+  "agregar",
+  "quitar",
+]);
+
 function leerCookie(header: string | null, nombre: string): string | undefined {
   const m = header?.match(new RegExp(`(?:^|;\\s*)${nombre}=([^;]+)`));
   return m ? decodeURIComponent(m[1]) : undefined;
@@ -44,6 +60,9 @@ export async function guardarEvento(tipo: TipoEvento, c: Cuerpo, request: Reques
     con_gclid: Boolean(texto(c.gclid, 500)),
     referrer: texto(c.referrer, 300),
     dispositivo: texto(c.dispositivo, 20),
+    resultados: entero(c.resultados, 0, 5000),
+    posicion: entero(c.posicion, 1, 5000),
+    detalle: DETALLES.has(String(c.detalle)) ? String(c.detalle) : null,
   };
   if (!debeRegistrar(request)) return simular("web_eventos", fila, request);
   const { error } = await supabaseServidor.from("web_eventos").insert(fila);

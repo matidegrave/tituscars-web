@@ -72,9 +72,12 @@ export interface ResultadoCatalogo {
   total: number;
 }
 
-export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCatalogo> {
-  let query = supabase.from(TABLA).select("*", { count: "exact" }).neq("estado", "senado");
-
+/**
+ * Los filtros del catálogo sobre una consulta a catalogo_publico (sin señados).
+ * Lo comparten el listado y el recuento del panel de filtros.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- el builder de supabase-js tiene tipos genéricos muy profundos
+function conFiltros<Q extends { or: any; in: any; gte: any; lte: any; eq: any; not: any }>(query: Q, filtros: Filtros): Q {
   // Búsqueda flexible sobre la columna `busqueda` (ver lib/busqueda.ts).
   const busqueda = filtroBusqueda(filtros.q);
   if (busqueda) query = query.or(busqueda);
@@ -91,6 +94,33 @@ export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCata
   if (filtros.carroceria.length > 0) query = query.in("carroceria", filtros.carroceria);
   if (filtros.condicion) query = query.eq("condicion", filtros.condicion);
   if (filtros.baja) query = query.not("precio_anterior", "is", null);
+  return query;
+}
+
+/** Cuántos autos dan estos filtros (botón "Ver N autos" del panel del celu). */
+export async function contarAutos(filtros: Filtros): Promise<number> {
+  const { count } = await conFiltros(
+    supabase.from(TABLA).select("id", { count: "exact", head: true }).neq("estado", "senado"),
+    filtros
+  );
+  return count ?? 0;
+}
+
+/** ¿Hay algún 0 KM en stock? (acceso rápido "0 KM"). */
+export async function hayCeroKm(): Promise<boolean> {
+  const { count } = await supabase
+    .from(TABLA)
+    .select("id", { count: "exact", head: true })
+    .neq("estado", "senado")
+    .eq("condicion", "0km");
+  return (count ?? 0) > 0;
+}
+
+export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCatalogo> {
+  let query = conFiltros(
+    supabase.from(TABLA).select("*", { count: "exact" }).neq("estado", "senado"),
+    filtros
+  );
 
   const desde = (filtros.page - 1) * POR_PAGINA;
   const hasta = desde + POR_PAGINA - 1;

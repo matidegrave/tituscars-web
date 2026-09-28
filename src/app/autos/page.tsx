@@ -15,11 +15,34 @@ import { EstadoVacio } from "@/components/catalogo/estado-vacio";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdListaAutos } from "@/lib/json-ld";
-import { getAnios, getAutosPaginados, getFacetsBase } from "@/lib/autos";
+import { redirect } from "next/navigation";
+import {
+  getAnios,
+  getAutosConBaja,
+  getAutosPaginados,
+  getFacetsBase,
+  getUltimosIngresos,
+  hayCeroKm,
+} from "@/lib/autos";
+import { AccesosRapidos } from "@/components/catalogo/accesos-rapidos";
+import { SinResultados } from "@/components/catalogo/sin-resultados";
+import { TrackBusqueda } from "@/components/catalogo/track-busqueda";
+import {
+  carroceriaParecida,
+  interpretarBusqueda,
+  nombrePropio,
+  normalizar,
+  sugerirCorreccion,
+} from "@/lib/busqueda";
+import { linkWhatsapp } from "@/lib/whatsapp";
+import type { AutoCatalogo } from "@/lib/types";
 import { calcularFacets } from "@/lib/facets";
 import {
   filtrosAParams,
+  filtrosVacios,
   parseFiltros,
+  urlCatalogo,
+  type Filtros,
   type SearchParamsCatalogo,
 } from "@/lib/filtros";
 
@@ -39,21 +62,89 @@ export default async function CatalogoPage({
   const sp = await searchParams;
   // Scroll infinito: siempre arranca en la primera tanda (un ?page= viejo se ignora).
   const filtros = { ...parseFiltros(sp), page: 1 };
+
+  // Palabras de la búsqueda que son filtros ("camioneta diesel", "hilux
+  // automatica"): se aplican como filtros y se busca el resto como texto.
+  // Redirección en el servidor: anda igual sin JS.
+  if (filtros.q) {
+    const { filtros: f, resto, hayFiltros } = interpretarBusqueda(filtros.q);
+    if (hayFiltros) {
+      const unir = (a: string[], b: string[]) => [...a, ...b.filter((v) => !a.includes(v))];
+      redirect(
+        urlCatalogo({
+          ...filtros,
+          q: resto || undefined,
+          carroceria: unir(filtros.carroceria, f.carroceria),
+          transmision: unir(filtros.transmision, f.transmision),
+          combustible: unir(filtros.combustible, f.combustible),
+          condicion: f.condicion ?? filtros.condicion,
+        })
+      );
+    }
+  }
+
   const claveFiltros = filtrosAParams(filtros).toString();
 
-  const [facetRows, anios, resultado] = await Promise.all([
+  const [facetRows, anios, resultado, conBaja, ceroKm] = await Promise.all([
     getFacetsBase(),
     getAnios(),
     getAutosPaginados(filtros),
+    getAutosConBaja(2),
+    hayCeroKm(),
   ]);
 
   const { marcas, hayTransmision, hayCarroceria } = calcularFacets(facetRows);
   const { autos, total } = resultado;
 
+  // Búsqueda sin resultados: "¿Quisiste decir…?" y autos parecidos.
+  let sinResultados: {
+    sugerencia: { texto: string; href: string } | null;
+    parecidos: AutoCatalogo[];
+  } | null = null;
+  if (total === 0 && filtros.q) {
+    // Candidatos: marcas y modelos en stock. El modelo a veces trae la versión
+    // entera ("T-Cross Trendline 1.6 Msi"): también cuentan su primera palabra
+    // y las dos primeras ("T-Cross", "Onix Joy"), sumando cantidades.
+    const porTexto = new Map<string, number>();
+    const sumarCandidato = (texto: string, cantidad: number) => {
+      const t = nombrePropio(texto.trim());
+      if (t) porTexto.set(t, (porTexto.get(t) ?? 0) + cantidad);
+    };
+    for (const m of marcas) {
+      sumarCandidato(m.marca, m.cantidad);
+      for (const mo of m.modelos) {
+        const palabras = mo.modelo.split(/\s+/);
+        sumarCandidato(mo.modelo, mo.cantidad);
+        if (palabras.length > 1) sumarCandidato(palabras[0], mo.cantidad);
+        if (palabras.length > 2) sumarCandidato(palabras.slice(0, 2).join(" "), mo.cantidad);
+      }
+    }
+    const candidatos = [...porTexto].map(([texto, cantidad]) => ({ texto, cantidad }));
+    const correccion = sugerirCorreccion(filtros.q, candidatos);
+    const compacto = normalizar(filtros.q).replace(/ /g, "");
+    const marca = marcas.find((m) => compacto.includes(normalizar(m.marca).replace(/ /g, "")));
+    const carroceria = carroceriaParecida(filtros.q);
+    const buscarParecidos = (f: Partial<Filtros>) =>
+      getAutosPaginados({ ...filtrosVacios(), ...f }).then((r) => r.autos.slice(0, 8));
+    const parecidos = marca
+      ? await buscarParecidos({ marca: [marca.marca] })
+      : carroceria
+        ? await buscarParecidos({ carroceria: [carroceria] })
+        : await getUltimosIngresos(8);
+    sinResultados = {
+      sugerencia: correccion
+        ? { texto: correccion.texto, href: urlCatalogo({ ...filtros, q: correccion.texto }) }
+        : null,
+      parecidos,
+    };
+  }
+
   return (
     // Fondo gris para que las tarjetas blancas se despeguen.
     <div className="bg-zinc-100">
       <TrackAlMontar tipo="vista_catalogo" />
+      {/* Una por URL (key): registra la búsqueda recién enviada con su total. */}
+      <TrackBusqueda key={claveFiltros} resultados={total} />
       <JsonLd data={jsonLdListaAutos(autos)} />
       <div className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
@@ -89,10 +180,18 @@ export default async function CatalogoPage({
                   anios={anios}
                   hayTransmision={hayTransmision}
                   hayCarroceria={hayCarroceria}
+                  total={total}
                 />
                 <OrdenSelect filtros={filtros} className="bg-background" />
               </div>
             </BarraCatalogoCelu>
+
+            <AccesosRapidos
+              filtros={filtros}
+              hayBaja={conBaja.length >= 2}
+              hayCeroKm={ceroKm}
+              className="mt-4"
+            />
 
             {/* Destino del scroll al buscar (debajo del header fijo). */}
             <div
@@ -103,7 +202,14 @@ export default async function CatalogoPage({
             </div>
 
             <div className="mt-4">
-              {autos.length > 0 ? (
+              {sinResultados ? (
+                <SinResultados
+                  buscado={filtros.q ?? ""}
+                  sugerencia={sinResultados.sugerencia}
+                  parecidos={sinResultados.parecidos}
+                  hrefAviso={linkWhatsapp(`Hola, busco un ${filtros.q}. Avisenme si les entra uno.`)}
+                />
+              ) : autos.length > 0 ? (
                 <CatalogoInfinito
                   key={claveFiltros}
                   inicial={autos}

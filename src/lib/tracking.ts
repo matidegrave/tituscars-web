@@ -18,7 +18,8 @@ export type TipoEvento =
   | "lead_form"
   | "click_llamar"
   | "compartir"
-  | "vista_catalogo";
+  | "vista_catalogo"
+  | "favorito";
 
 export interface DatosEvento {
   auto_id?: string;
@@ -32,6 +33,15 @@ export interface DatosEvento {
   con_baja?: boolean;
   /** content_category de Meta (ej. "consignacion"). */
   categoria?: string;
+  /** busqueda: cuántos autos encontró (0 incluido). */
+  resultados?: number;
+  /** vista_auto desde el listado: posición de la card tocada (1 = primera). */
+  posicion?: number;
+  /**
+   * Subtipo. click_whatsapp: consulta | disponible | financiar | permuta |
+   * aviso_sin_stock | favoritos. favorito: agregar | quitar.
+   */
+  detalle?: string;
 }
 
 /** Evento estándar de Meta para cada tipo propio (los que no están, sólo van a web_eventos). */

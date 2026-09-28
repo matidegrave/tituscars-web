@@ -17,6 +17,7 @@ const TIPOS: readonly TipoEvento[] = [
   "click_llamar",
   "compartir",
   "vista_catalogo",
+  "favorito",
 ];
 const MAXIMO_BYTES = 8 * 1024;
 

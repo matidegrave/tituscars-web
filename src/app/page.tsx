@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/hero";
+import { BuscadorCatalogo } from "@/components/catalogo/buscador-catalogo";
+import { AccesosRapidos } from "@/components/catalogo/accesos-rapidos";
+import { filtrosVacios } from "@/lib/filtros";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 import { BeneficiosBanner } from "@/components/beneficios-banner";
 import { AccesosBlock } from "@/components/accesos-block";
@@ -8,6 +11,7 @@ import { JsonLd } from "@/components/json-ld";
 import { jsonLdConcesionaria } from "@/lib/json-ld";
 import {
   getAutosConBaja,
+  hayCeroKm,
   getDestacados,
   getTotalEnStock,
   getUltimosIngresos,
@@ -33,11 +37,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [destacados, ultimosIngresos, totalEnStock, conBaja] = await Promise.all([
+  const [destacados, ultimosIngresos, totalEnStock, conBaja, ceroKm] = await Promise.all([
     getDestacados(8),
     getUltimosIngresos(12),
     getTotalEnStock(),
     getAutosConBaja(100),
+    hayCeroKm(),
   ]);
 
   const jsonLd = jsonLdConcesionaria();
@@ -46,6 +51,17 @@ export default async function HomePage() {
     <>
       <JsonLd data={jsonLd} />
       <Hero />
+
+      {/* Celu: buscador y accesos rápidos a la vista, sin bajar. */}
+      <section className="bg-white px-4 pb-4 pt-4 lg:hidden">
+        <BuscadorCatalogo filtros={filtrosVacios()} id="buscador-home" />
+        <AccesosRapidos
+          filtros={filtrosVacios()}
+          hayBaja={conBaja.length >= 2}
+          hayCeroKm={ceroKm}
+          className="mt-3"
+        />
+      </section>
 
       <section className="bg-zinc-100">
         <div className="mx-auto max-w-6xl px-4 py-16">

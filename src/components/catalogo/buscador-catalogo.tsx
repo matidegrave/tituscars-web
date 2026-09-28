@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { camposOcultos, urlCatalogo, type Filtros } from "@/lib/filtros";
-import { track } from "@/lib/tracking";
+import { marcarBusquedaPendiente } from "@/components/catalogo/track-busqueda";
 import { cn } from "@/lib/utils";
 
 /** Donde arrancan los resultados (chips + listado): destino del scroll al buscar. */
@@ -15,8 +15,9 @@ export const ID_RESULTADOS = "resultados";
  * Buscador del catálogo (celu y compu). Mientras se escribe NO se busca nada:
  * sin debounce, sin tocar la URL ni los resultados. Se busca sólo al enviar
  * (Enter, la lupa del teclado o el botón naranja): ahí se aplica el filtro
- * (conservando los demás), aparece el chip, se registra UNA "busqueda", se
- * cierra el teclado y se hace scroll suave al inicio de los resultados.
+ * (conservando los demás), aparece el chip, se registra UNA "busqueda" (con
+ * cuántos resultados dio, al mostrarlos), se cierra el teclado y se hace
+ * scroll suave al inicio de los resultados.
  *
  * Sin JS es un <form method="get" action="/autos"> real con name="q" (y los
  * demás filtros como campos ocultos): el submit anda igual.
@@ -57,7 +58,8 @@ export function BuscadorCatalogo({
     evento.preventDefault();
     const q = texto.trim();
     input.current?.blur(); // cierra el teclado del celu
-    if (q) track("busqueda", { q });
+    // Se registra en /autos al ver los resultados (con cuántos dio).
+    if (q) marcarBusquedaPendiente(q);
     if (q === aplicada) {
       document.getElementById(ID_RESULTADOS)?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;

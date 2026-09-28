@@ -4,13 +4,14 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { cargarPixel, pageView, track, type DatosEvento } from "@/lib/tracking";
 
-/** Datos del auto que llevan los links de WhatsApp de la ficha (data-track-*). */
+/** Datos que llevan los links de WhatsApp (data-track-*): auto y subtipo (detalle). */
 function datosDelLink(link: HTMLAnchorElement): DatosEvento {
   const valor = Number(link.dataset.trackValor);
   return {
     auto_id: link.dataset.trackAutoId || undefined,
     slug: link.dataset.trackSlug || undefined,
     valor: Number.isFinite(valor) && valor > 0 ? valor : undefined,
+    detalle: link.dataset.trackDetalle || undefined,
   };
 }
 
