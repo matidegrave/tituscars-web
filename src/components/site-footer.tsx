@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { FooterWhatsapp } from "@/components/footer-whatsapp";
+import { BuscaPorFooter } from "@/components/links-usados";
 import {
   GOOGLE_PUNTAJE,
   RESENAS_CANTIDAD,
@@ -97,6 +98,8 @@ export function SiteFooter() {
           </a>
         </div>
       </div>
+
+      <BuscaPorFooter />
 
       <div className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/50">
         © {new Date().getFullYear()} {nombre}. Todos los derechos reservados.

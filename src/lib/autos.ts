@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { supabase } from "@/lib/supabase";
 import type { AutoCatalogo } from "@/lib/types";
@@ -335,3 +336,30 @@ export async function getAutosPorIds(ids: string[]): Promise<AutoCatalogo[]> {
     descripcion_extra: null,
   }));
 }
+
+/** Lo justo de cada auto en stock para las páginas /usados (conteos, textos, sitemap y links). */
+export interface AutoResumen {
+  slug: string;
+  marca: string;
+  modelo: string;
+  anio: number;
+  carroceria: AutoCatalogo["carroceria"];
+  transmision: AutoCatalogo["transmision"];
+  combustible: AutoCatalogo["combustible"];
+  condicion: AutoCatalogo["condicion"];
+  precio_ars: number;
+  actualizado_en: string;
+}
+
+// Cacheado 60 s (como el resto de las páginas): el footer lo usa en todas.
+export const getResumenStock = unstable_cache(
+  async (): Promise<AutoResumen[]> => {
+    const { data } = await supabase
+      .from(TABLA)
+      .select("slug, marca, modelo, anio, carroceria, transmision, combustible, condicion, precio_ars, actualizado_en")
+      .neq("estado", "senado");
+    return (data ?? []) as AutoResumen[];
+  },
+  ["resumen-stock-v1"],
+  { revalidate: 60 }
+);

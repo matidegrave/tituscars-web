@@ -39,6 +39,11 @@ function categorias(nombres: string[], filtro: string): Regla[] {
   return nombres.map((n) => ({ prefijo: `/${n}`, destino: `/autos?${filtro}`, exacta: true }));
 }
 
+/** Una categoría vieja (sólo la ruta exacta) -> su página /usados/... (tanda 42). */
+function aUsados(nombres: string[], pagina: string): Regla[] {
+  return nombres.map((n) => ({ prefijo: `/${n}`, destino: `/usados/${pagina}`, exacta: true }));
+}
+
 const REDIRECCIONES: Regla[] = [
   // Tienda Nube
   { prefijo: "/productos", destino: "/autos" },
@@ -51,14 +56,14 @@ const REDIRECCIONES: Regla[] = [
   { prefijo: "/checkout", destino: "/autos" },
   { prefijo: "/account", destino: "/" },
   { prefijo: "/mi-cuenta", destino: "/" },
-  // Categorías de Tienda Nube -> el mismo filtro acá, según las carrocerías
-  // que existen hoy (auto, camioneta, suv, utilitario, moto). Sedán y
-  // hatchback son "auto"; las pick-ups, "camioneta". Singular y plural.
-  ...categorias(["camionetas", "camioneta", "pickups", "pickup", "pick-ups", "pick-up"], "carroceria=camioneta"),
-  ...categorias(["suv", "suvs"], "carroceria=suv"),
-  ...categorias(["utilitarios", "utilitario"], "carroceria=utilitario"),
+  // Categorías de Tienda Nube -> su página /usados/... (tanda 42) si tiene
+  // una; si no, el mismo filtro en /autos. Sedán y hatchback son "autos"; las
+  // pick-ups, "camionetas". Singular y plural.
+  ...aUsados(["camionetas", "camioneta", "pickups", "pickup", "pick-ups", "pick-up"], "camionetas"),
+  ...aUsados(["suv", "suvs"], "suv"),
+  ...aUsados(["utilitarios", "utilitario"], "utilitarios"),
   ...categorias(["motos", "moto"], "carroceria=moto"),
-  ...categorias(["sedan", "sedanes", "hatchback", "hatchbacks"], "carroceria=auto"),
+  ...aUsados(["sedan", "sedanes", "hatchback", "hatchbacks"], "autos"),
   ...categorias(["usados", "autos-usados", "usado"], "condicion=usado"),
   ...categorias(["0-km", "autos-0km", "nuevos"], "condicion=0km"),
   // /0km es la ruta vieja de ESTA web (tanda 1c/3), por si quedó indexada.
@@ -158,7 +163,7 @@ async function resolverFicha(request: NextRequest, slug: string): Promise<NextRe
 // (con extensión: robots.txt, sitemap.xml, /brand/logo.png, /reels/x.mp4…)
 // siempre pasan.
 const RUTAS_PROPIAS =
-  /^\/(?:$|autos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|favoritos$|ficha-no-disponible$|api\/|_next\/|_vercel\/|\.well-known\/)/;
+  /^\/(?:$|autos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|favoritos$|usados\/[a-z0-9]+(?:-[a-z0-9]+)*$|ficha-no-disponible$|api\/|_next\/|_vercel\/|\.well-known\/)/;
 
 function esRutaPropia(pathname: string): boolean {
   return RUTAS_PROPIAS.test(pathname) || /\.[a-z0-9]+$/i.test(pathname);
@@ -207,6 +212,9 @@ export async function proxy(request: NextRequest) {
 
   // 3. Prefijo de idioma de Tienda Nube
   pathname = pathname.replace(IDIOMA, "") || "/";
+
+  // 3b. /usados/Toyota -> /usados/toyota (las páginas para Google van en minúscula).
+  if (pathname.startsWith("/usados/")) pathname = pathname.toLowerCase();
 
   // 4. URLs viejas
   const vieja = redireccion(request, pathname);

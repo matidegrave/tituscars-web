@@ -129,14 +129,16 @@ export function jsonLdConcesionaria(): JsonLdObjeto {
 }
 
 /** schema.org ItemList para /autos: los autos que se muestran, en orden. */
-export function jsonLdListaAutos(autos: AutoCatalogo[]): JsonLdObjeto {
+export function jsonLdListaAutos(autos: AutoCatalogo[], nombre?: string): JsonLdObjeto {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
+    ...(nombre && { name: nombre, numberOfItems: autos.length }),
     itemListElement: autos.slice(0, 24).map((auto, i) => ({
       "@type": "ListItem",
       position: i + 1,
       url: `${SITE_URL}/autos/${auto.slug}`,
+      ...(nombre && { name: `${auto.marca} ${auto.modelo} ${auto.anio}` }),
     })),
   };
 }

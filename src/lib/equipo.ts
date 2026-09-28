@@ -24,7 +24,7 @@ const MARCA_EN_COOKIES = new RegExp(`(?:^|;\\s*)${COOKIE_EQUIPO}=(1(?:\\.[a-z]{1
 export function limpiarVendedor(v: string | null | undefined): string {
   return (v ?? "")
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z]/g, "")
     .slice(0, 20);

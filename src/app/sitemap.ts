@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getAutosParaSitemap } from "@/lib/autos";
 import { SITE_URL } from "@/lib/config";
+import { getResumenStock } from "@/lib/autos";
+import { MINIMO_INDEXABLE, hrefPagina, paginasConStock } from "@/lib/usados";
 
 // Fecha del último cambio de contenido de cada página institucional (de git).
 // Actualizarla al editar el texto de la página.
@@ -41,5 +43,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...estaticas, ...fichas];
+  // Páginas /usados/... (tanda 42): sólo las que tienen 2 autos o más, con la
+  // fecha del auto más reciente de cada una.
+  const usados: MetadataRoute.Sitemap = paginasConStock(await getResumenStock())
+    .filter((p) => p.cantidad >= MINIMO_INDEXABLE)
+    .map((p) => ({
+      url: `${SITE_URL}${hrefPagina(p.pagina)}`,
+      lastModified: p.ultimo ? new Date(p.ultimo) : undefined,
+      changeFrequency: "daily",
+      priority: 0.8,
+    }));
+
+  return [...estaticas, ...usados, ...fichas];
 }

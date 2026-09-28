@@ -1,4 +1,5 @@
 import { conColores } from "@/lib/color-foto";
+import { LinksUsadosHome } from "@/components/links-usados";
 import type { Metadata } from "next";
 import { Hero } from "@/components/hero";
 import { BuscadorCatalogo } from "@/components/catalogo/buscador-catalogo";
@@ -70,6 +71,7 @@ export default async function HomePage() {
           hayCeroKm={ceroKm}
           className="mt-3"
         />
+        <LinksUsadosHome className="mt-3" />
       </section>
 
       <section className="bg-zinc-100">
