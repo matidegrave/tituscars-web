@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { abrirWhatsappEnApp, navegadorDeApp } from "@/lib/whatsapp-apps";
 import { track } from "@/lib/tracking";
 import { formatMiles, formatPrecio, parseMiles } from "@/lib/format";
 
@@ -168,7 +169,10 @@ export function BusquedaAMedida({
     // La pestaña se abre ya, en el clic: si se abriera después de esperar a la
     // base, el navegador la bloquearía como popup. Cuando termina el insert se
     // la manda a WhatsApp.
-    const pestana = window.open("", "_blank");
+    // En el navegador de TikTok/Instagram/Facebook no se abre pestaña: lo
+    // resuelve WhatsappEnApps (whatsapp:// y, si no abre, el panel de ayuda).
+    const enApp = navegadorDeApp() !== null;
+    const pestana = enApp ? null : window.open("", "_blank");
 
     let guardado = false;
     try {
@@ -201,7 +205,9 @@ export function BusquedaAMedida({
 
     // Salga bien o mal el insert, el pedido llega igual por WhatsApp.
     const link = linkWhatsapp(construirMensaje(datos, autoTitulo));
-    if (pestana) {
+    if (enApp) {
+      abrirWhatsappEnApp(link);
+    } else if (pestana) {
       pestana.opener = null;
       pestana.location.href = link;
     } else {

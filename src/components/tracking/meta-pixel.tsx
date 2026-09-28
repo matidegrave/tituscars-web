@@ -45,6 +45,9 @@ export function MetaPixel() {
         const link = (evento.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
         if (!link) return;
         const href = link.href;
+        // El link del panel de WhatsApp en apps (whatsapp-en-apps) repite un
+        // click que ya se contó: no se mide dos veces.
+        if (link.hasAttribute("data-whatsapp-directo")) return;
         if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//i.test(href)) {
           track("click_whatsapp", datosDelLink(link));
         } else if (href.startsWith("tel:")) {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
@@ -8,6 +9,9 @@ import { WhatsappFloatingButton } from "@/components/whatsapp-floating-button";
 import { OcultarEn } from "@/components/ocultar-en";
 import { VersionGuard } from "@/components/version-guard";
 import { MetaPixel } from "@/components/tracking/meta-pixel";
+import { ModoEquipo } from "@/components/modo-equipo";
+import { WhatsappEnApps } from "@/components/whatsapp-en-apps";
+import { COOKIE_EQUIPO } from "@/lib/equipo";
 import { SCRIPT_REPORTE_ERRORES } from "@/lib/reporte-errores-script";
 import { PIXEL_ID, SNIPPET_PIXEL } from "@/lib/tracking";
 import { SITE_URL } from "@/lib/config";
@@ -50,9 +54,13 @@ export const metadata: Metadata = {
 // además el snippet se autolimita al host tituscars.com.
 const RUTAS_SIN_MARCO = ["/links"];
 
-const pixelActivo = Boolean(PIXEL_ID) && process.env.VERCEL_ENV === "production";
+const pixelDeProduccion = Boolean(PIXEL_ID) && process.env.VERCEL_ENV === "production";
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Con la marca de equipo (lib/equipo.ts) no va el Pixel. El snippet igual lo
+  // vuelve a chequear en el navegador (cookie o respaldo en localStorage).
+  const equipo = (await cookies()).get(COOKIE_EQUIPO)?.value === "1";
+  const pixelActivo = pixelDeProduccion && !equipo;
   return (
     <html
       lang="es"
@@ -78,6 +86,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </OcultarEn>
         <VersionGuard />
         <MetaPixel />
+        <WhatsappEnApps />
+        <ModoEquipo />
         {pixelActivo && (
           <noscript>
             {/* eslint-disable-next-line @next/next/no-img-element */}

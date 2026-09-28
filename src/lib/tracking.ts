@@ -9,6 +9,8 @@
  * Sólo navegador.
  */
 
+import { esEquipoCliente } from "@/lib/equipo";
+
 export type TipoEvento =
   | "vista_auto"
   | "click_whatsapp"
@@ -66,11 +68,12 @@ declare global {
  * <MetaPixel /> al hidratar, vía window.__cargarPixel), así no compite con la
  * foto principal. Si el JS de la página no llegara a correr, se descarga igual
  * en el load. ES5, igual que el original.
- * Sólo corre en tituscars.com: en localhost o en un preview de vercel.app no
+ * Sólo corre en tituscars.com y sin la marca de equipo (lib/equipo.ts): en
+ * localhost, en un preview de vercel.app o en el celu de alguien del equipo no
  * se crea window.fbq y track() no le manda nada a Meta.
  */
 export const SNIPPET_PIXEL = (id: string) =>
-  `if(location.hostname==='${HOST_PIXEL}'){!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];var c=!1;f.__cargarPixel=function(){if(c)return;c=!0;var t=b.createElement(e);t.async=!0;t.src=v;var s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)};f.addEventListener('load',function(){setTimeout(f.__cargarPixel,0)})}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${id}');fbq('track','PageView')}`;
+  `if(location.hostname==='${HOST_PIXEL}'&&!function(){try{return/(?:^|;\\s*)tc_equipo=1(?:;|$)/.test(document.cookie)||localStorage.getItem('tc_equipo')==='1'}catch(x){return!1}}()){!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];var c=!1;f.__cargarPixel=function(){if(c)return;c=!0;var t=b.createElement(e);t.async=!0;t.src=v;var s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)};f.addEventListener('load',function(){setTimeout(f.__cargarPixel,0)})}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${id}');fbq('track','PageView')}`;
 
 /** Descarga fbevents.js (una sola vez). La llama <MetaPixel /> al hidratar. */
 export function cargarPixel() {
@@ -177,6 +180,8 @@ function paginaSinCampana(): string {
 export function track(tipo: TipoEvento, datos: DatosEvento = {}) {
   try {
     if (typeof window === "undefined") return;
+    // Visitas del equipo: ni Pixel ni /api/track (web_eventos / CAPI).
+    if (esEquipoCliente()) return;
     const eventId = uuid();
     const s = sesion();
 

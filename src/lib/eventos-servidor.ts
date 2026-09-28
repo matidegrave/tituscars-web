@@ -1,4 +1,4 @@
-import { esProduccionReal, simular } from "@/lib/entorno";
+import { debeRegistrar, simular } from "@/lib/entorno";
 import { supabaseServidor } from "@/lib/supabase-servidor";
 import { EVENTO_META, type TipoEvento } from "@/lib/tracking";
 
@@ -45,7 +45,7 @@ export async function guardarEvento(tipo: TipoEvento, c: Cuerpo, request: Reques
     referrer: texto(c.referrer, 300),
     dispositivo: texto(c.dispositivo, 20),
   };
-  if (!esProduccionReal(request)) return simular("web_eventos", fila, request);
+  if (!debeRegistrar(request)) return simular("web_eventos", fila, request);
   const { error } = await supabaseServidor.from("web_eventos").insert(fila);
   if (error) console.error("[TRACK] web_eventos", error.message);
 }
@@ -56,7 +56,7 @@ export async function enviarAMeta(tipo: TipoEvento, c: Cuerpo, request: Request)
   const nombre = EVENTO_META[tipo];
   const eventId = texto(c.event_id, 64);
   if (!nombre) return;
-  if (!esProduccionReal(request)) {
+  if (!debeRegistrar(request)) {
     return simular(`CAPI ${nombre}`, { event_id: eventId, categoria: c.categoria ?? null }, request);
   }
   if (!token || !dataset || !eventId) return;

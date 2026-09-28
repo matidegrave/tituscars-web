@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { WHATSAPP_CONSIGNAS } from "@/lib/config";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { abrirWhatsappEnApp } from "@/lib/whatsapp-apps";
 import { formatMiles, parseMiles } from "@/lib/format";
 import { track } from "@/lib/tracking";
 import {
@@ -90,11 +91,9 @@ export function CotizacionForm({
     evento.preventDefault();
     if (!valido) return;
     track("lead_form", { categoria: "consignacion" });
-    window.open(
-      linkWhatsapp(mensajeConsigna(datos), WHATSAPP_CONSIGNAS),
-      "_blank",
-      "noopener,noreferrer"
-    );
+    const link = linkWhatsapp(mensajeConsigna(datos), WHATSAPP_CONSIGNAS);
+    // En el navegador de TikTok/Instagram/Facebook lo resuelve WhatsappEnApps.
+    if (!abrirWhatsappEnApp(link)) window.open(link, "_blank", "noopener,noreferrer");
     setEnviado(true);
   }
 

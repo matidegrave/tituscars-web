@@ -1,4 +1,4 @@
-import { esProduccionReal, simular } from "@/lib/entorno";
+import { debeRegistrar, simular } from "@/lib/entorno";
 import { supabaseServidor } from "@/lib/supabase-servidor";
 import { demasiadas, dentroDelLimite, ipDe } from "@/lib/rate-limit";
 
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     pagina,
     auto_slug: autoSlug,
   };
-  if (!esProduccionReal(request)) {
+  if (!debeRegistrar(request)) {
     // Sin nombre ni celular en el log.
     simular("busquedas_web", { ...fila, nombre: "[oculto]", celular: "[oculto]" }, request);
     return ok();

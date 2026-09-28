@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { COOKIE_EQUIPO, UN_ANIO_S } from "@/lib/equipo";
 
 /**
  * Router de la web antes de renderizar. En orden:
@@ -6,6 +7,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * 1. Host: en producción, los *.vercel.app redirigen a tituscars.com (mismo
  *    path y query) para no competir con el dominio en Google. Los previews de
  *    ramas (VERCEL_ENV=preview) no se tocan.
+ * 1b. ?equipo=1 / ?equipo=0: marca (o desmarca) el dispositivo como del equipo
+ *    (no se mide) y vuelve a la misma URL sin el parámetro.
  * 2. Barra final: se saca acá (next.config tiene skipTrailingSlashRedirect)
  *    para que una URL vieja con barra resuelva en UN solo 308 y no en dos.
  * 3. Prefijo de idioma de Tienda Nube (/us/, /es/, …): se saca y se aplican
@@ -171,6 +174,27 @@ export async function proxy(request: NextRequest) {
       `${DOMINIO}${request.nextUrl.pathname}${request.nextUrl.search}`,
       308
     );
+  }
+
+  // 1b. Modo equipo (lib/equipo.ts): ?equipo=1 marca este dispositivo por un
+  // año, ?equipo=0 la saca. Vuelve a la misma URL sin el parámetro (307: es
+  // un paso técnico, no una URL que tenga que indexarse). La cookie se puede
+  // leer desde el navegador para no cargar el Pixel ni mandar eventos.
+  const equipo = request.nextUrl.searchParams.get("equipo");
+  if (equipo === "1" || equipo === "0") {
+    const limpia = new URL(request.url);
+    limpia.searchParams.delete("equipo");
+    const respuesta = NextResponse.redirect(limpia, 307);
+    respuesta.cookies.set(COOKIE_EQUIPO, equipo, {
+      // "0" vive un rato: le avisa al navegador que borre el respaldo de localStorage.
+      maxAge: equipo === "1" ? UN_ANIO_S : 300,
+      path: "/",
+      sameSite: "lax",
+      secure: true,
+      httpOnly: false,
+    });
+    respuesta.headers.set("Cache-Control", "no-store");
+    return respuesta;
   }
 
   let pathname = request.nextUrl.pathname;
