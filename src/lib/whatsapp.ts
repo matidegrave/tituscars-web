@@ -1,8 +1,10 @@
 import { WHATSAPP_CONSIGNAS, WHATSAPP_VENTAS } from "@/lib/config";
 
 /**
- * Mensaje de consulta por un auto, estilo Mercado Libre: el link va solo en su
- * línea para que WhatsApp arme la vista previa con la foto del auto.
+ * Mensaje de consulta por un auto, en una línea: "Hola, ¿cómo estás? Me
+ * interesó este vehículo: TÍTULO AÑO — km · combustible · precio — link".
+ * Sin emojis: en Kommo algunos llegaban como "�". Si el auto se ve con cita
+ * previa, la pregunta va en una segunda línea.
  */
 export function mensajeConsultaAuto({
   titulo,
@@ -17,14 +19,23 @@ export function mensajeConsultaAuto({
   url: string;
   conCita: boolean;
 }): string {
-  const lineas = [
-    "Hola, ¿cómo estás? Me interesó este vehículo:",
-    `🚗 ${titulo} ${anio}`,
-    datos,
-    url,
-  ];
-  if (conCita) lineas.push("¿Puedo coordinar una cita para verlo?");
-  return lineas.join("\n");
+  const linea = [`Hola, ¿cómo estás? Me interesó este vehículo: ${titulo} ${anio}`, datos, url]
+    .filter(Boolean)
+    .join(" — ");
+  return conCita ? `${linea}\n¿Puedo coordinar una cita para verlo?` : linea;
+}
+
+/**
+ * Saca emojis (y sus modificadores) de un mensaje: algunos llegan a Kommo como
+ * "�". Cubre también lo que el cliente escribe en los formularios.
+ */
+export function sinEmojis(texto: string): string {
+  return texto
+    // El emoji y el espacio que lo precede ("Juan 👍." -> "Juan.").
+    .replace(/[ \t]*[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}]+/gu, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +\n/g, "\n")
+    .trim();
 }
 
 /** Link a wa.me con el mensaje prearmado. Por defecto, al número de ventas. */
@@ -32,7 +43,7 @@ export function linkWhatsapp(
   mensaje = "Hola, consulto desde la web.",
   numero: string = WHATSAPP_VENTAS
 ): string {
-  return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(sinEmojis(mensaje))}`;
 }
 
 export const MENSAJE_CONSIGNA = "Hola! Quiero consignar mi auto con Titus Cars.";
