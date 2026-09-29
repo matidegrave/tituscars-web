@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { getResumenStock } from "@/lib/autos";
 import {
   MINIMO_INDEXABLE,
@@ -40,11 +41,17 @@ export async function BuscaPorFooter() {
     },
   ].filter((g) => g.items.length > 0);
   return (
-    <div className="mx-auto max-w-6xl border-t border-white/10 px-4 py-8">
-      <p className="text-sm font-semibold uppercase tracking-wide text-white/50">
-        Buscá por
-      </p>
-      <div className="mt-3 grid gap-4 sm:grid-cols-3">
+    // Plegado con <details> nativo (anda sin JS): cerrado, una línea discreta.
+    // Los links quedan en el HTML igual (SEO: los únicos links a /usados/*).
+    <details className="group mx-auto max-w-6xl border-t border-white/10 px-4 py-4">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-sm text-white/50 hover:text-white/80 [&::-webkit-details-marker]:hidden">
+        Buscá por marca, tipo o precio
+        <ChevronDown
+          className="h-4 w-4 transition-transform group-open:rotate-180"
+          aria-hidden="true"
+        />
+      </summary>
+      <div className="mt-4 grid gap-4 pb-2 sm:grid-cols-3">
         {grupos.map((g) => (
           <nav
             key={g.titulo}
@@ -67,6 +74,6 @@ export async function BuscaPorFooter() {
           </nav>
         ))}
       </div>
-    </div>
+    </details>
   );
 }

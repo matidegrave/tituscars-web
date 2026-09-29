@@ -1,7 +1,7 @@
 import type { AutoCatalogo } from "@/lib/types";
 
 /**
- * Cartel "En salón" (verde) / "Agendar cita" (naranja). En la card se achica
+ * Cartel "En salón" (verde) / "Con cita previa" (naranja; va en mayúsculas). En la card se achica
  * desde sm; en la ficha queda siempre del tamaño de la card en celu.
  */
 export function PastillaDisponibilidad({
@@ -18,7 +18,7 @@ export function PastillaDisponibilidad({
     <span
       className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm ${color} ${tamano}`}
     >
-      {disponibilidad === "salon" ? "En salón" : "Agendar cita"}
+      {disponibilidad === "salon" ? "En salón" : "Con cita previa"}
     </span>
   );
 }

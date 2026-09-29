@@ -27,9 +27,6 @@ export function Hero() {
           </span>
           Tu próximo auto está en <span className="text-brand">TITUS.</span>
         </h1>
-        <p className="mt-2 max-w-xl text-base text-white/70 lg:mt-4 lg:text-lg">
-          Usados peritados y con garantía en Córdoba
-        </p>
         <Button
           size="lg"
           className="mt-4 h-11 rounded-full px-6 text-base lg:mt-6 lg:h-12"
