@@ -17,7 +17,7 @@ const CSP = [
   `img-src 'self' data: blob: ${SUPABASE} https://www.facebook.com https://i.ytimg.com`,
   "font-src 'self' data:",
   `connect-src 'self' ${SUPABASE} https://www.facebook.com https://connect.facebook.net`,
-  "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://www.google.com",
+  "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://www.google.com https://www.instagram.com",
   "media-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

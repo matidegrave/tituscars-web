@@ -15,7 +15,7 @@ const NAV_LINKS = [
   { href: "/autos", label: "Catálogo" },
   { href: "/consigna", label: "Consigná tu auto" },
   { href: "/financiacion", label: "Financiación" },
-  { href: "/nosotros", label: "Nosotros" },
+  { href: "/nosotros", label: "Conocenos" },
   { href: "/contacto", label: "Contacto" },
 ];
 

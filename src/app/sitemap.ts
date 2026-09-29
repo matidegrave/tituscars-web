@@ -17,7 +17,7 @@ const PAGINAS_ESTATICAS: {
   { path: "/autos", changeFrequency: "hourly", priority: 0.9 },
   { path: "/consigna", changeFrequency: "monthly", priority: 0.6, modificada: "2026-09-26" },
   { path: "/financiacion", changeFrequency: "monthly", priority: 0.5, modificada: "2026-09-26" },
-  { path: "/nosotros", changeFrequency: "monthly", priority: 0.4, modificada: "2026-09-26" },
+  { path: "/nosotros", changeFrequency: "monthly", priority: 0.4, modificada: "2026-09-29" },
   { path: "/contacto", changeFrequency: "monthly", priority: 0.5, modificada: "2026-09-27" },
 ];
 

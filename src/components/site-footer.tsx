@@ -46,7 +46,7 @@ export function SiteFooter() {
               Financiación
             </Link>
             <Link href="/nosotros" className="hover:text-brand">
-              Nosotros
+              Conocenos
             </Link>
             <Link href="/contacto" className="hover:text-brand">
               Contacto
