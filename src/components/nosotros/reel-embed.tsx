@@ -1,55 +1,91 @@
 "use client";
 
-import { useState } from "react";
-import { Images, Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { urlEmbed, urlInstagram, type VideoInstagram } from "@/lib/historia";
 import { cn } from "@/lib/utils";
 
+/** Se monta el iframe cuando la tarjeta está a menos de esto de la pantalla (sólo vertical). */
+const MARGEN_MONTAR = "600px 0px";
+/** Y se desmonta (vuelve el placeholder) cuando queda más lejos que esto: memoria de celus viejos. */
+const MARGEN_DESMONTAR = "2500px 0px";
+
 /**
- * Reel de Instagram que se reproduce dentro de la página (tanda 44).
- * Arranca como una fachada liviana (nada de Instagram se descarga): una
- * tarjeta 9:16 con play. Al tocarla se cambia por el iframe de /embed/ (sin
- * embed.js, que es pesado). Sin JS, la fachada es un link al reel.
+ * Reel de Instagram dentro de la página (tanda 44b): un solo toque, el play de
+ * Instagram. El iframe de /embed/ (sin embed.js) se monta solo cuando la
+ * tarjeta se acerca a la pantalla y se desmonta cuando queda lejos. En los
+ * carruseles horizontales cuenta recién cuando el ítem entra en vista (el
+ * carrusel recorta: IntersectionObserver lo ve afuera).
+ * Mientras tanto, un placeholder gris con pulso (no parece un botón). Sin JS
+ * o sin IntersectionObserver, ese placeholder es un link al reel.
  * Abajo, siempre, "¿No carga? Verlo en Instagram": los reels con música con
  * derechos a veces no se reproducen embebidos.
  */
 export function ReelEmbed({ video, fecha, className }: { video: VideoInstagram; fecha?: string; className?: string }) {
-  const [abierto, setAbierto] = useState(false);
+  const caja = useRef<HTMLDivElement>(null);
+  const [montado, setMontado] = useState(false);
+  // Hasta que el iframe termina de cargar se ve el gris con pulso (no un recuadro blanco).
+  const [cargado, setCargado] = useState(false);
   const url = urlInstagram(video);
+
+  useEffect(() => {
+    const el = caja.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const cerca = new IntersectionObserver(
+      (entradas) => {
+        if (entradas.some((e) => e.isIntersecting)) setMontado(true);
+      },
+      { rootMargin: MARGEN_MONTAR }
+    );
+    const lejos = new IntersectionObserver(
+      (entradas) => {
+        if (entradas.every((e) => !e.isIntersecting)) {
+          setMontado(false);
+          setCargado(false);
+        }
+      },
+      { rootMargin: MARGEN_DESMONTAR }
+    );
+    cerca.observe(el);
+    // Para desmontar cuenta sólo la distancia vertical: en un carrusel se mira
+    // la fila entera (el ítem que salió por el costado no se desmonta; si no,
+    // al volver a él se recargaría el reel).
+    lejos.observe(el.closest("[data-carrusel]") ?? el);
+    return () => {
+      cerca.disconnect();
+      lejos.disconnect();
+    };
+  }, []);
+
   return (
     <div className={cn("w-full max-w-[340px]", className)}>
-      {abierto ? (
-        <iframe
-          src={urlEmbed(video)}
-          title={`Video de Titus Cars en Instagram${fecha ? ` (${fecha})` : ""}`}
-          allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
-          allowFullScreen
-          loading="lazy"
-          className="block aspect-[9/17] w-full max-w-[400px] rounded-2xl border border-border bg-white"
-        />
-      ) : (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => {
-            e.preventDefault();
-            setAbierto(true);
-          }}
-          aria-label={`${video.t === "p" ? "Ver la foto" : "Ver el video"}${fecha ? ` de ${fecha}` : ""}`}
-          className="group relative flex aspect-[9/16] w-full flex-col items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(160deg,var(--brand)_0%,#b83a00_55%,var(--brand-black)_100%)] text-white shadow-sm"
-        >
-          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/70 transition-transform group-hover:scale-105">
-            {video.t === "p" ? (
-              <Images className="h-10 w-10" aria-hidden="true" />
-            ) : (
-              <Play className="ml-1 h-10 w-10 fill-white" aria-hidden="true" />
-            )}
-          </span>
-          {fecha && <span className="mt-4 text-lg font-bold">{fecha}</span>}
-          <span className="mt-1 text-sm text-white/85">{video.t === "p" ? "Toca para ver la foto" : "Toca para ver"}</span>
-        </a>
-      )}
+      {/* Misma proporción para el placeholder y el iframe: el cambio no mueve nada. */}
+      <div
+        ref={caja}
+        className={cn(
+          "aspect-[9/17] w-full max-w-[400px] rounded-2xl",
+          !cargado && "bg-zinc-200 motion-safe:animate-pulse"
+        )}
+      >
+        {montado ? (
+          <iframe
+            src={urlEmbed(video)}
+            title={`Video de Titus Cars en Instagram${fecha ? ` (${fecha})` : ""}`}
+            allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
+            allowFullScreen
+            loading="lazy"
+            onLoad={() => setCargado(true)}
+            className={cn("block h-full w-full rounded-2xl", cargado ? "border border-border bg-white" : "opacity-0")}
+          />
+        ) : (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Ver en Instagram${fecha ? ` (${fecha})` : ""}`}
+            className="block h-full w-full rounded-2xl"
+          />
+        )}
+      </div>
       <a
         href={url}
         target="_blank"

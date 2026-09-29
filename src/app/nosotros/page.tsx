@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
 import { InstagramIcon, YoutubeIcon, TikTokIcon } from "@/components/icons/social-icons";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
@@ -37,7 +36,7 @@ export const revalidate = 60;
 function Videos({ videos, fecha }: { videos: VideoInstagram[]; fecha?: string }) {
   if (videos.length === 1) return <ReelEmbed video={videos[0]} fecha={fecha} className="mt-4" />;
   return (
-    <div className="-mx-4 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2">
+    <div data-carrusel className="-mx-4 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2">
       {videos.map((v) => (
         <div key={v.id} className="w-[78%] max-w-[300px] shrink-0 snap-start">
           <ReelEmbed video={v} fecha={fecha} />
@@ -64,28 +63,10 @@ export default async function NosotrosPage() {
 
   return (
     <div className="overflow-x-hidden">
-      {/* Hero: la historia + quiénes somos (el texto de antes). */}
-      <section className="mx-auto max-w-3xl px-4 pb-10 pt-12 sm:pt-16">
+      {/* Hero corto: la línea de tiempo arranca enseguida. */}
+      <section className="mx-auto max-w-3xl px-4 pb-6 pt-10 sm:pt-14">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Nuestra historia</h1>
         <p className="mt-2 text-lg font-medium text-brand">Del primer auto al local soñado.</p>
-        {/* TODO (Agustín): reemplazar este texto por el definitivo. */}
-        <div className="mt-4 space-y-3 text-muted-foreground">
-          <p>
-            Titus Cars es una agencia de autos usados en Córdoba. Trabajamos con vehículos peritados, con
-            garantía escrita y gestoría propia para que comprar o vender un auto sea simple, sin vueltas.
-          </p>
-          <p>
-            Nuestro diferencial es la consigna virtual: vendemos tu auto sin que dejes de usarlo. Nos
-            ocupamos de peritar, publicar en todos nuestros canales, atender las consultas y cerrar la venta,
-            mientras vos seguís con tu día a día.
-          </p>
-        </div>
-        <Link
-          href="/autos"
-          className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-brand px-6 text-base font-semibold text-white hover:bg-brand/90"
-        >
-          Ver autos disponibles
-        </Link>
       </section>
 
       {/* Línea de tiempo */}
@@ -138,9 +119,23 @@ export default async function NosotrosPage() {
         </div>
       </section>
 
-      {/* Cierre: dirección, horarios, redes y WhatsApp */}
+      {/* Quiénes somos (el texto de siempre) y el cierre: dirección, horarios, redes y WhatsApp */}
       <section className="mx-auto max-w-3xl px-4 py-16">
-        <h2 className="text-2xl font-bold tracking-tight">Vení a conocernos</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Quiénes somos</h2>
+        {/* TODO (Agustín): reemplazar este texto por el definitivo. */}
+        <div className="mt-4 space-y-3 text-muted-foreground">
+          <p>
+            Titus Cars es una agencia de autos usados en Córdoba. Trabajamos con vehículos peritados, con
+            garantía escrita y gestoría propia para que comprar o vender un auto sea simple, sin vueltas.
+          </p>
+          <p>
+            Nuestro diferencial es la consigna virtual: vendemos tu auto sin que dejes de usarlo. Nos
+            ocupamos de peritar, publicar en todos nuestros canales, atender las consultas y cerrar la venta,
+            mientras vos seguís con tu día a día.
+          </p>
+        </div>
+
+        <h2 className="mt-12 text-2xl font-bold tracking-tight">Vení a conocernos</h2>
         <ul className="mt-4 space-y-3 text-foreground/80">
           <li className="flex items-start gap-2">
             <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
