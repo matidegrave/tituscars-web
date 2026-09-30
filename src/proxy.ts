@@ -212,15 +212,33 @@ const BOTS = [
   "amazonbot",
 ];
 
-// GOOGLE Y BING NO SE BLOQUEAN ACÁ. Los dos respetan robots.txt, y ahí ya está
-// el `Disallow: /autos?`: frenarlos con un 403 sería pegarle a los únicos dos
-// crawlers que nos interesa tener contentos —de ellos viene el tráfico— y un
-// 403 repetido es una señal fea para el ranking. Van primero porque sus UA
-// contienen «bot» y caerían en la lista de arriba.
-const BOTS_PERMITIDOS = ["googlebot", "bingbot"];
+// ESTOS NO SE BLOQUEAN ACÁ. Los buscadores respetan robots.txt y ahí ya está el
+// `Disallow: /autos?`: frenarlos con un 403 sería pegarle a los únicos crawlers
+// que nos interesa tener contentos —de ellos viene el tráfico— y un 403 repetido
+// es una señal fea para el ranking. Los de Google Ads van por el mismo motivo
+// que Meta: son los que revisan que la landing de un anuncio exista y funcione,
+// y un 403 ahí es un anuncio rechazado.
+//
+//   · googlebot / bingbot           — los buscadores.
+//   · adsbot-google                 — revisa las landings de Google Ads.
+//   · mediapartners-google          — AdSense.
+//   · applebot                      — Siri y Spotlight.
+//
+// Van PRIMERO porque sus UA contienen «bot» y caerían en la lista de arriba.
+const BOTS_PERMITIDOS = [
+  "googlebot",
+  "bingbot",
+  "adsbot-google",
+  "mediapartners-google",
+  "applebot",
+];
 
-/** Parámetros que delatan un anuncio real y no una combinación inventada. */
-const QUERY_DE_ANUNCIO = ["utm_", "fbclid"];
+/**
+ * Parámetros que delatan un anuncio real y no una combinación inventada por el
+ * crawler: `utm_` y `gclid` (Google Ads) y `fbclid` (Meta). Esas URLs tienen que
+ * poder revisarse.
+ */
+const QUERY_DE_ANUNCIO = ["utm_", "gclid", "fbclid"];
 
 function bloquearCrawler(request: NextRequest): Response | null {
   const ua = (request.headers.get("user-agent") ?? "").toLowerCase();
