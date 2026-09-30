@@ -154,6 +154,8 @@ export function FiltrosActivos({ filtros }: { filtros: Filtros }) {
         <Link
           key={chip.key}
           href={href(chip.filtrosSinEsto)}
+          // Sigue siendo una URL de filtros: no se sigue (tanda 46b).
+          rel="nofollow"
           className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/15"
         >
           {chip.label}

@@ -49,9 +49,24 @@ export const revalidate = 60;
 
 // Siempre /autos, sin query: filtros, búsqueda y orden son la misma página
 // para Google.
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/autos` },
-};
+//
+// Y CON QUERY, `noindex,follow` (tanda 46b): una combinación de filtros no es
+// una página que valga la pena indexar —el canónico ya manda a /autos— pero sus
+// links SÍ se siguen, que es por donde el crawler llega a las fichas. Es el
+// mismo mensaje que el `Disallow: /autos?` de robots.txt, para el crawler que
+// igual entró (un link externo, un sitemap viejo).
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParamsCatalogo>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const conQuery = Object.values(sp).some((v) => (Array.isArray(v) ? v.length > 0 : !!v));
+  return {
+    alternates: { canonical: `${SITE_URL}/autos` },
+    ...(conQuery ? { robots: { index: false, follow: true } } : {}),
+  };
+}
 
 export default async function CatalogoPage({
   searchParams,

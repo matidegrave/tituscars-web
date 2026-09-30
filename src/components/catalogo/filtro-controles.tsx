@@ -61,6 +61,9 @@ export function OpcionLink({
     <Link
       href={href}
       prefetch={false}
+      // Filtro: no se sigue (tanda 46b) — cada combinación es una URL nueva y
+      // seguirlas es un árbol infinito.
+      rel="nofollow"
       role="checkbox"
       aria-checked={checked}
       onClick={(e) => {
@@ -104,6 +107,8 @@ export function OpcionBoton({
     <Link
       href={href}
       prefetch={false}
+      // Filtro: no se sigue (tanda 46b).
+      rel="nofollow"
       aria-current={activo ? "true" : undefined}
       onClick={(e) => {
         if (!onElegir) return;

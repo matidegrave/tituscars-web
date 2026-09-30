@@ -19,6 +19,8 @@ export function CondicionTabs({ filtros }: { filtros: Filtros }) {
             key={op.label}
             href={urlCatalogo({ ...filtros, condicion: op.value })}
             prefetch={false}
+            // Filtro: no se sigue (tanda 46b).
+            rel="nofollow"
             aria-current={activo ? "page" : undefined}
             className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
               activo

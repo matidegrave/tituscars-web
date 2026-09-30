@@ -28,7 +28,8 @@ export function SinResultados({
       {sugerencia && (
         <p className="text-base">
           ¿Quisiste decir{" "}
-          <Link href={sugerencia.href} className="font-semibold text-brand underline underline-offset-2">
+          {/* Es una búsqueda (/autos?q=): no se sigue (tanda 46b). */}
+          <Link href={sugerencia.href} rel="nofollow" className="font-semibold text-brand underline underline-offset-2">
             {sugerencia.texto}
           </Link>
           ?

@@ -169,7 +169,7 @@ function esRutaPropia(pathname: string): boolean {
   return RUTAS_PROPIAS.test(pathname) || /\.[a-z0-9]+$/i.test(pathname);
 }
 
-// ─── El crawler de Meta Ads (tanda 46) ────────────────────────────────────────
+// ─── Los crawlers en los filtros (tandas 46 y 46b) ───────────────────────────
 //
 // QUÉ PASÓ. El bot de Meta Ads ("meta-externalads") recorre /autos con miles de
 // combinaciones de filtros (?marca=&modelo=&precio_min=&precio_max=…). Cada
@@ -191,15 +191,41 @@ function esRutaPropia(pathname: string): boolean {
 // REAL —la que el bot tiene que poder revisar—, no una combinación de filtros
 // que se inventó él. Esa pasa.
 //
-// Es un parche de emergencia: lo que cierra la puerta de verdad es robots.txt
-// con Disallow de /autos?* y rel="nofollow" en los links de filtros (tanda 46b).
-const BOTS_META = ["meta-externalads", "facebookexternalhit"];
+// ESTA ES LA PUERTA PARA LOS QUE NO LEEN robots.txt. A los que sí lo leen
+// —Google y Bing— los frena `Disallow: /autos?` (src/app/robots.ts), y los links
+// de filtros van con rel="nofollow" para no invitar a nadie a entrar.
+// A QUIÉN SE LE CIERRA. Meta Ads fue el que tiró la base, pero el problema es
+// de cualquiera que recorra combinaciones de filtros, así que la regla vale para
+// todos (tanda 46b): los genéricos («bot», «crawler», «spider») más los que se
+// vieron o se esperan por nombre.
+const BOTS = [
+  "meta-externalads",
+  "facebookexternalhit",
+  "bot",
+  "crawler",
+  "spider",
+  "bytespider",
+  "ahrefs",
+  "semrush",
+  "gptbot",
+  "claudebot",
+  "amazonbot",
+];
+
+// GOOGLE Y BING NO SE BLOQUEAN ACÁ. Los dos respetan robots.txt, y ahí ya está
+// el `Disallow: /autos?`: frenarlos con un 403 sería pegarle a los únicos dos
+// crawlers que nos interesa tener contentos —de ellos viene el tráfico— y un
+// 403 repetido es una señal fea para el ranking. Van primero porque sus UA
+// contienen «bot» y caerían en la lista de arriba.
+const BOTS_PERMITIDOS = ["googlebot", "bingbot"];
+
 /** Parámetros que delatan un anuncio real y no una combinación inventada. */
 const QUERY_DE_ANUNCIO = ["utm_", "fbclid"];
 
-function bloquearCrawlerMeta(request: NextRequest): Response | null {
+function bloquearCrawler(request: NextRequest): Response | null {
   const ua = (request.headers.get("user-agent") ?? "").toLowerCase();
-  if (!BOTS_META.some((b) => ua.includes(b))) return null;
+  if (BOTS_PERMITIDOS.some((b) => ua.includes(b))) return null;
+  if (!BOTS.some((b) => ua.includes(b))) return null;
 
   const { pathname, search } = request.nextUrl;
   if (pathname === "/api/track") return new Response(null, { status: 403 });
@@ -214,8 +240,8 @@ function bloquearCrawlerMeta(request: NextRequest): Response | null {
 // ─── Proxy ─────────────────────────────────────────────────────────────────────
 
 export async function proxy(request: NextRequest) {
-  // 0. El crawler de Meta, afuera antes que nada (tanda 46).
-  const bloqueo = bloquearCrawlerMeta(request);
+  // 0. Los crawlers, afuera antes que nada (tandas 46 y 46b).
+  const bloqueo = bloquearCrawler(request);
   if (bloqueo) return bloqueo;
 
   // 1. *.vercel.app de producción -> tituscars.com
