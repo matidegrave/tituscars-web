@@ -21,7 +21,25 @@ const TIPOS: readonly TipoEvento[] = [
 ];
 const MAXIMO_BYTES = 8 * 1024;
 
+// NINGÚN BOT MIDE (tanda 46). El crawler de Meta Ads ejecuta el JS de cada
+// página que recorre, así que disparaba este endpoint una vez por combinación
+// de filtros: ~4.000 filas basura en `web_eventos` cada 15 minutos, que además
+// ensuciaban las métricas de la web. El proxy ya lo corta por user-agent, pero
+// la puerta se cierra también acá: es el único lugar por el que se escribe, y
+// cualquier bot que no esté en esa lista igual tiene que rebotar.
+//
+// Responde 204 como siempre —un bot no tiene que enterarse de nada— pero sin
+// tocar la base ni mandarle el evento a Meta.
+const BOTS = ["bot", "crawler", "spider", "meta-external", "facebookexternalhit"];
+
+function esBot(request: Request): boolean {
+  const ua = (request.headers.get("user-agent") ?? "").toLowerCase();
+  return BOTS.some((b) => ua.includes(b));
+}
+
 export async function POST(request: Request) {
+  // Un bot no mide: 204 y listo, sin insert.
+  if (esBot(request)) return new Response(null, { status: 204 });
   // 60 eventos por minuto por IP; pasado eso, 429 sin tocar la base.
   if (!dentroDelLimite(`track:${ipDe(request)}`, 60, 60 * 1000)) return demasiadas();
   try {

@@ -169,9 +169,55 @@ function esRutaPropia(pathname: string): boolean {
   return RUTAS_PROPIAS.test(pathname) || /\.[a-z0-9]+$/i.test(pathname);
 }
 
+// ─── El crawler de Meta Ads (tanda 46) ────────────────────────────────────────
+//
+// QUÉ PASÓ. El bot de Meta Ads ("meta-externalads") recorre /autos con miles de
+// combinaciones de filtros (?marca=&modelo=&precio_min=&precio_max=…). Cada
+// combinación es una página dinámica sin caché: consulta `catalogo_publico` y,
+// como además ejecuta el JS, dispara /api/track. Medido en los logs: +25.000
+// consultas y ~4.000 inserts en `web_eventos` cada 15 minutos. Eso saturó el
+// proyecto de Supabase que COMPARTE con el sistema de gestión — timeouts y el
+// login de gestión sin cargar. O sea: un bot de publicidad dejando sin sistema
+// a la agencia.
+//
+// QUÉ SE CORTA: sólo /autos CON query y /api/track. Con 403, seco, antes de
+// tocar la base.
+//
+// QUÉ QUEDA ABIERTO, a propósito: la home, las fichas (/autos/:slug), /usados/*
+// y /autos SIN query. Meta tiene que poder revisar las landings de los anuncios,
+// y esas son páginas contadas, no un árbol infinito.
+//
+// Y LA EXCEPCIÓN: si la query trae `utm_` o `fbclid` es la URL de un anuncio
+// REAL —la que el bot tiene que poder revisar—, no una combinación de filtros
+// que se inventó él. Esa pasa.
+//
+// Es un parche de emergencia: lo que cierra la puerta de verdad es robots.txt
+// con Disallow de /autos?* y rel="nofollow" en los links de filtros (tanda 46b).
+const BOTS_META = ["meta-externalads", "facebookexternalhit"];
+/** Parámetros que delatan un anuncio real y no una combinación inventada. */
+const QUERY_DE_ANUNCIO = ["utm_", "fbclid"];
+
+function bloquearCrawlerMeta(request: NextRequest): Response | null {
+  const ua = (request.headers.get("user-agent") ?? "").toLowerCase();
+  if (!BOTS_META.some((b) => ua.includes(b))) return null;
+
+  const { pathname, search } = request.nextUrl;
+  if (pathname === "/api/track") return new Response(null, { status: 403 });
+  if (pathname === "/autos" && search.length > 1) {
+    const q = search.toLowerCase();
+    if (QUERY_DE_ANUNCIO.some((p) => q.includes(p))) return null;
+    return new Response(null, { status: 403 });
+  }
+  return null;
+}
+
 // ─── Proxy ─────────────────────────────────────────────────────────────────────
 
 export async function proxy(request: NextRequest) {
+  // 0. El crawler de Meta, afuera antes que nada (tanda 46).
+  const bloqueo = bloquearCrawlerMeta(request);
+  if (bloqueo) return bloqueo;
+
   // 1. *.vercel.app de producción -> tituscars.com
   const host = (request.headers.get("host") ?? "").toLowerCase();
   if (host.endsWith(".vercel.app") && process.env.VERCEL_ENV === "production") {
