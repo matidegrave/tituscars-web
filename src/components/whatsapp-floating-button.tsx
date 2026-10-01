@@ -15,7 +15,7 @@ export function WhatsappFloatingButton() {
 
   return (
     <a
-      href={linkWhatsappSegunRuta(pathname, "Hola, ¿cómo estás? Quería hacer una consulta.")}
+      href={linkWhatsappSegunRuta(pathname)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Escribinos por WhatsApp"

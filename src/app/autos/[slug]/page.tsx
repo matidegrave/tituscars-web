@@ -245,6 +245,8 @@ export default async function FichaAutoPage({
           extra={auto.descripcion_extra}
         />
         <VideoSection videoUrl={auto.video_url} />
+        {/* Lo último de la publicación del auto (tanda 47e), antes de la línea naranja. */}
+        <Confianza />
       </div>
 
       {similares.length > 0 && (
@@ -261,10 +263,6 @@ export default async function FichaAutoPage({
           </div>
         </div>
       )}
-
-      <div className="mt-12">
-        <Confianza />
-      </div>
 
       <BusquedaAMedidaDiferida autoSlug={auto.slug} autoTitulo={`${titulo} ${auto.anio}`} className="mt-12" />
     </div>

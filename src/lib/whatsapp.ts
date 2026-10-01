@@ -38,9 +38,15 @@ export function sinEmojis(texto: string): string {
     .trim();
 }
 
-/** Link a wa.me con el mensaje prearmado. Por defecto, al número de ventas. */
+/**
+ * El mensaje del WhatsApp general (tanda 47c): botón del encabezado, menú,
+ * círculo flotante, footer, /contacto, /nosotros. Uno solo para toda la web.
+ */
+export const MENSAJE_GENERAL = "Hola, ¿cómo estás? Estuve viendo el catálogo web y quería hacer una consulta.";
+
+/** Link a wa.me con el mensaje prearmado. Por defecto, el general al número de ventas. */
 export function linkWhatsapp(
-  mensaje = "Hola, consulto desde la web.",
+  mensaje = MENSAJE_GENERAL,
   numero: string = WHATSAPP_VENTAS
 ): string {
   return `https://wa.me/${numero}?text=${encodeURIComponent(sinEmojis(mensaje))}`;

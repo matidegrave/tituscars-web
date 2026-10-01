@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import type { AutoCatalogo } from "@/lib/types";
 import { POR_PAGINA, type Filtros } from "@/lib/filtros";
 import { filtroBusqueda } from "@/lib/busqueda";
-import { porcentajeBaja } from "@/lib/format";
 import type { FacetRow } from "@/lib/facets";
 
 const TABLA = "catalogo_publico";
@@ -116,17 +115,15 @@ export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCata
   const desde = (filtros.page - 1) * POR_PAGINA;
   const hasta = desde + POR_PAGINA - 1;
 
-  // "Bajaron de precio": primero los que bajaron, por % de baja; después el
-  // resto por fecha. El % no es una columna, así que se ordena acá: se traen
-  // todos los que pasan los filtros (el catálogo es chico) y se pagina en JS.
+  // "Bajaron de precio" (tanda 47d): la baja más reciente primero, con la
+  // MISMA comparación que el carrusel de la home (compararPorBaja). Filtra
+  // primero (la query ya trae los filtros) y ordena acá: se traen todos los que
+  // pasan los filtros (el catálogo es chico) y se pagina en JS.
   if (filtros.orden === "baja") {
     const { data } = await query
       .order("fecha_ingreso", { ascending: false })
       .order("id", { ascending: true });
-    const autos = ((data ?? []) as AutoCatalogo[])
-      .map((auto, i) => ({ auto, i, pct: porcentajeBaja(auto) }))
-      .sort((a, b) => b.pct - a.pct || a.i - b.i)
-      .map((x) => x.auto);
+    const autos = [...((data ?? []) as AutoCatalogo[])].sort(compararPorBaja);
     return { autos: autos.slice(desde, hasta + 1), total: autos.length };
   }
 
@@ -143,6 +140,13 @@ export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCata
     case "km":
       query = query.order("km", { ascending: true });
       break;
+    case "salon":
+      // "En salón primero" (tanda 47d): no filtra; 'salon' antes que 'cita'
+      // (desc alfabético) y, dentro de cada grupo, lo último que se subió.
+      query = query
+        .order("disponibilidad", { ascending: false, nullsFirst: false })
+        .order("fecha_ingreso", { ascending: false });
+      break;
     default:
       // Por defecto: lo último que se subió primero.
       query = query.order("fecha_ingreso", { ascending: false });
@@ -157,6 +161,23 @@ export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCata
   return { autos: data ?? [], total: count ?? 0 };
 }
 
+/**
+ * EL orden de "Bajaron de precio" (tandas 47 y 47d), uno solo para el
+ * carrusel de la home y para /autos?orden=baja: primero los que tienen baja
+ * reciente (precio_anterior), de la baja más nueva a la más vieja
+ * (precio_bajo_en desc); a igual fecha, el que ingresó último. Después, los
+ * que no bajaron, por fecha de ingreso.
+ */
+export function compararPorBaja(a: AutoCatalogo, b: AutoCatalogo): number {
+  const bajaA = a.precio_anterior != null, bajaB = b.precio_anterior != null;
+  if (bajaA !== bajaB) return bajaA ? -1 : 1;
+  if (bajaA) {
+    const porFecha = (b.precio_bajo_en ?? "").localeCompare(a.precio_bajo_en ?? "");
+    if (porFecha !== 0) return porFecha;
+  }
+  return (b.fecha_ingreso ?? "").localeCompare(a.fecha_ingreso ?? "");
+}
+
 /** Autos con baja de precio reciente, la baja más reciente primero (home, tanda 47). */
 export async function getAutosConBaja(limite = 8): Promise<AutoCatalogo[]> {
   const { data } = await supabase
@@ -164,9 +185,7 @@ export async function getAutosConBaja(limite = 8): Promise<AutoCatalogo[]> {
     .select("*")
     .neq("estado", "senado")
     .not("precio_anterior", "is", null);
-  return ((data ?? []) as AutoCatalogo[])
-    .sort((a, b) => (b.precio_bajo_en ?? "").localeCompare(a.precio_bajo_en ?? ""))
-    .slice(0, limite);
+  return [...((data ?? []) as AutoCatalogo[])].sort(compararPorBaja).slice(0, limite);
 }
 
 export async function getFacetsBase(): Promise<FacetRow[]> {

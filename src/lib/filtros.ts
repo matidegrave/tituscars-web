@@ -23,6 +23,7 @@ export const OPCIONES_ORDEN: { value: string; label: string }[] = [
   { value: "nuevos", label: "Año más nuevo" },
   { value: "km", label: "Menos km" },
   { value: "baja", label: "Bajaron de precio" },
+  { value: "salon", label: "En salón primero" },
 ];
 
 export interface Filtros {
