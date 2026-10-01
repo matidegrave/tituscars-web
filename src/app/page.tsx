@@ -64,7 +64,8 @@ export default async function HomePage() {
       </section>
 
       <section className="bg-zinc-100">
-        <div className="mx-auto max-w-6xl px-4 py-16">
+        {/* Celu: arranca enseguida debajo del buscador (tanda 47). */}
+        <div className="mx-auto max-w-6xl px-4 pb-16 pt-8 lg:pt-16">
           <h2 className="text-center text-2xl font-bold tracking-tight md:text-left">Destacados</h2>
           <div className="mt-6">
             <FeaturedCarousel autos={destacados} totalEnStock={totalEnStock} />
@@ -80,6 +81,7 @@ export default async function HomePage() {
           <div className="mt-6">
             <FeaturedCarousel
               autos={conBaja.slice(0, 8)}
+              etiqueta="Autos que bajaron de precio"
               totalEnStock={totalEnStock}
               verMas={{
                 href: "/autos?baja=1",

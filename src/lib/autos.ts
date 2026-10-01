@@ -157,7 +157,7 @@ export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCata
   return { autos: data ?? [], total: count ?? 0 };
 }
 
-/** Autos con baja de precio reciente, de mayor a menor % de baja (home). */
+/** Autos con baja de precio reciente, la baja más reciente primero (home, tanda 47). */
 export async function getAutosConBaja(limite = 8): Promise<AutoCatalogo[]> {
   const { data } = await supabase
     .from(TABLA)
@@ -165,7 +165,7 @@ export async function getAutosConBaja(limite = 8): Promise<AutoCatalogo[]> {
     .neq("estado", "senado")
     .not("precio_anterior", "is", null);
   return ((data ?? []) as AutoCatalogo[])
-    .sort((a, b) => porcentajeBaja(b) - porcentajeBaja(a))
+    .sort((a, b) => (b.precio_bajo_en ?? "").localeCompare(a.precio_bajo_en ?? ""))
     .slice(0, limite);
 }
 

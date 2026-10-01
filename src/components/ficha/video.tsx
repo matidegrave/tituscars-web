@@ -18,7 +18,9 @@ export function VideoSection({ videoUrl }: { videoUrl: string | null }) {
     <div>
       <h2 className="text-lg font-bold">Video</h2>
       {id ? (
-        <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-xl bg-black">
+        // Celu: de borde a borde y sin el marco de las tarjetas, para que no se
+        // confunda con otro auto.
+        <div className="relative -mx-4 mt-4 aspect-video overflow-hidden bg-black sm:mx-0 sm:rounded-xl">
           {reproducir ? (
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1`}

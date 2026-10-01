@@ -12,7 +12,8 @@ import { WhatsappCta } from "@/components/ficha/whatsapp-bar";
 import { Descripcion } from "@/components/ficha/descripcion";
 import { VideoSection } from "@/components/ficha/video";
 import { Confianza } from "@/components/ficha/confianza";
-import { AutoGrid } from "@/components/auto-grid";
+import { AutoCard } from "@/components/auto-card";
+import { CarruselTarjetas } from "@/components/carrusel-tarjetas";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdAuto } from "@/lib/json-ld";
 import { TrackVistaAuto } from "@/components/tracking/track-vista-auto";
@@ -247,10 +248,16 @@ export default async function FichaAutoPage({
       </div>
 
       {similares.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-lg font-bold">Te puede interesar</h2>
+        // Separador claro: lo de abajo ya no es este auto.
+        <div className="mt-14 border-t-[3px] border-brand pt-10">
+          <h2 className="text-lg font-bold">Otros autos que te pueden interesar</h2>
           <div className="mt-4">
-            <AutoGrid autos={similares} />
+            {/* Celu: carrusel (asoma el siguiente, flechas). Desde sm: la grilla. */}
+            <CarruselTarjetas etiqueta="Otros autos que te pueden interesar" grillaDesdeSm>
+              {similares.map((a) => (
+                <AutoCard key={a.id} auto={a} />
+              ))}
+            </CarruselTarjetas>
           </div>
         </div>
       )}
