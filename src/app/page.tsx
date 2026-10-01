@@ -8,7 +8,6 @@ import { listaSugerencias } from "@/lib/sugerencias";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 import { BeneficiosBanner } from "@/components/beneficios-banner";
 import { AccesosBlock } from "@/components/accesos-block";
-import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdConcesionaria } from "@/lib/json-ld";
 import {
@@ -102,7 +101,7 @@ export default async function HomePage() {
           Últimos ingresos
         </h2>
         <div className="mt-6">
-          <AutoGrid autos={ultimosIngresos} />
+          <FeaturedCarousel autos={ultimosIngresos} totalEnStock={totalEnStock} etiqueta="Últimos ingresos" />
         </div>
       </section>
     </>
