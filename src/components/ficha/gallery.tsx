@@ -66,6 +66,79 @@ export function FichaGallery({
     };
   }, [apiFoto]);
 
+  // Teclado (tanda 47f): ← y → cambian de foto mientras la galería está en
+  // pantalla o tiene el foco, sin tener que hacer click antes. No se capturan
+  // con el foco en un campo (buscador, formularios) ni con Alt/Ctrl/Meta (el
+  // "atrás" del navegador). En el visor manda PhotoSwipe (← → y Esc). Sin
+  // vuelta: en la primera y la última foto se queda (Embla sin loop).
+  const galeria = useRef<HTMLDivElement>(null);
+  const tiraMiniaturas = useRef<HTMLDivElement>(null);
+  const enPantalla = useRef(false);
+  useEffect(() => {
+    const el = galeria.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver((entradas) => {
+      enPantalla.current = entradas.some((e) => e.isIntersecting);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!apiFoto) return;
+    function alTeclear(e: KeyboardEvent) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (visor.current) return;
+      const foco = document.activeElement as HTMLElement | null;
+      if (foco && (foco.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(foco.tagName))) return;
+      const conFoco = !!foco && !!galeria.current?.contains(foco);
+      if (!enPantalla.current && !conFoco) return;
+      e.preventDefault();
+      setMontarResto(true);
+      if (e.key === "ArrowLeft") apiFoto?.scrollPrev();
+      else apiFoto?.scrollNext();
+    }
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [apiFoto]);
+
+  // La miniatura activa siempre a la vista: la tira se corre lo justo (como
+  // scrollIntoView inline:"nearest"), pero a mano para no mover nunca la página
+  // en vertical (scrollIntoView también scrollea los ancestros).
+  useEffect(() => {
+    const tira = tiraMiniaturas.current;
+    const mini = tira?.children[activo] as HTMLElement | undefined;
+    if (!tira || !mini) return;
+    // La tira es `relative`: offsetLeft de la miniatura ya es relativo a ella.
+    const izq = mini.offsetLeft;
+    const der = izq + mini.offsetWidth;
+    if (izq < tira.scrollLeft) tira.scrollTo({ left: izq, behavior: "smooth" });
+    else if (der > tira.scrollLeft + tira.clientWidth)
+      tira.scrollTo({ left: der - tira.clientWidth, behavior: "smooth" });
+  }, [activo]);
+
+  // Ruedita sobre la tira (tanda 47g): la desplaza a los costados. En las
+  // puntas (o si no desborda) el evento sigue y scrollea la página. El gesto
+  // horizontal del trackpad lo maneja el navegador solo.
+  const hayTira = ordenadas.length > 1;
+  useEffect(() => {
+    const tira = tiraMiniaturas.current;
+    if (!tira) return;
+    function alRodar(e: WheelEvent) {
+      if (!tira || e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+      // deltaMode 1 = líneas (Firefox con mouse), 2 = páginas.
+      const factor = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? tira.clientWidth : 1;
+      const delta = e.deltaY * factor;
+      const max = tira.scrollWidth - tira.clientWidth;
+      if ((delta < 0 && tira.scrollLeft <= 0) || (delta > 0 && tira.scrollLeft >= max - 1)) return;
+      e.preventDefault();
+      tira.scrollLeft += delta;
+    }
+    tira.addEventListener("wheel", alRodar, { passive: false });
+    return () => tira.removeEventListener("wheel", alRodar);
+  }, [hayTira]);
+
   // Visor a pantalla completa (PhotoSwipe, se carga recién al abrirlo). Al
   // cerrarlo, la ficha queda en la foto que se estaba viendo.
   const abriendo = useRef(false);
@@ -100,7 +173,7 @@ export function FichaGallery({
   }
 
   return (
-    <div>
+    <div ref={galeria} role="region" aria-label="Fotos del vehículo">
       <div className="relative">
         {/* Se desliza con el dedo; un toque sin deslizar abre el visor (Embla no
             dispara el click cuando hubo arrastre). */}
@@ -162,8 +235,8 @@ export function FichaGallery({
         )}
       </div>
 
-      {ordenadas.length > 1 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+      {hayTira && (
+        <div ref={tiraMiniaturas} className="relative mt-3 flex gap-2 overflow-x-auto pb-1">
           {ordenadas.map((foto, i) => (
             <button
               key={foto.url + i}

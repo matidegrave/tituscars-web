@@ -55,6 +55,9 @@ export async function abrirVisorFotos({
       msrc: i === indice ? miniatura : undefined,
     })),
     index: indice,
+    // Sin vuelta (tanda 47f): en la primera y la última foto se queda, como la
+    // galería de la ficha. ← → y Esc ya vienen de PhotoSwipe.
+    loop: false,
     bgOpacity: 1,
     showHideAnimationType: "fade",
     closeOnVerticalDrag: true,
