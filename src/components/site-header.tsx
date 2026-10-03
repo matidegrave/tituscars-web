@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
@@ -28,44 +28,11 @@ function esActivo(pathname: string, href: string): boolean {
 export function SiteHeader() {
   const [abierto, setAbierto] = useState(false);
   const pathname = usePathname();
-  const header = useRef<HTMLElement>(null);
-
-  // Arriba de todo, naranja pleno; al bajar pasa de a poco a translúcido
-  // (opacidad del fondo de 100% a 65% entre 0 y 120 px). Se escribe una
-  // variable CSS una vez por frame, sin re-renderizar ni trabar el scroll.
-  // Respaldo: el CSS acota el porcentaje a 65–100% con clamp(), así el color
-  // nunca queda inválido (ni transparente) aunque llegue un valor raro, y sin
-  // color-mix el navegador usa el naranja pleno.
-  useEffect(() => {
-    const el = header.current;
-    if (!el) return;
-    let frame = 0;
-
-    const actualizar = () => {
-      frame = 0;
-      // El rebote del iPhone arriba de todo da scrollY negativo: sin este
-      // límite el porcentaje pasa de 100%, el color queda inválido y el fondo
-      // se ve blanco.
-      const scroll = Math.min(Math.max(window.scrollY, 0), 120);
-      el.style.setProperty("--fondo-header", `${100 - (scroll / 120) * 35}%`);
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(actualizar);
-    };
-
-    actualizar();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(frame);
-    };
-  }, []);
 
   return (
-    <header
-      ref={header}
-      className="sticky top-0 z-40 bg-[color-mix(in_srgb,var(--brand)_clamp(65%,var(--fondo-header,100%),100%),transparent)] backdrop-blur-md transition-[background-color] duration-300"
-    >
+    // Naranja sólido siempre, también al scrollear (tanda 48: se sacó el
+    // efecto translúcido con blur de la tanda 15).
+    <header className="sticky top-0 z-40 bg-brand">
       <div className="mx-auto flex h-[var(--header-h)] max-w-6xl items-center justify-between px-4">
         {/* El logo lleva al catálogo (tanda 47); "Inicio" sigue en el menú. */}
         <Link href="/autos" className="shrink-0">
