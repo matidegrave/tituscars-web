@@ -7,6 +7,7 @@ import { cargarMasAutos } from "@/app/autos/acciones";
 import type { Filtros } from "@/lib/filtros";
 import type { AutoCatalogo } from "@/lib/types";
 import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
+import { prellenadoDesdeFiltros } from "@/lib/aviso-busqueda";
 
 const PREFIJO = "titus:catalogo:";
 const VIGENCIA_MS = 30 * 60 * 1000;
@@ -171,7 +172,14 @@ export function CatalogoInfinito({
       </div>
 
       {/* Fin del scroll infinito: si no apareció lo que buscaba, lo pide a medida. */}
-      {!hayMas && <BusquedaAMedidaDiferida sobreGris className="mx-auto mt-10 max-w-3xl" />}
+      {!hayMas && (
+        <BusquedaAMedidaDiferida
+          origen="pie_autos"
+          prellenado={prellenadoDesdeFiltros(filtros)}
+          sobreGris
+          className="mx-auto mt-10 max-w-3xl"
+        />
+      )}
     </>
   );
 }

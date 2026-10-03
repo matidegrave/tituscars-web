@@ -27,6 +27,7 @@ import {
 import { linkWhatsapp } from "@/lib/whatsapp";
 import { CatalogoInfinito } from "@/components/catalogo/catalogo-infinito";
 import { SinResultados } from "@/components/catalogo/sin-resultados";
+import { prellenadoDesdeFiltros } from "@/lib/aviso-busqueda";
 import { AutoGrid } from "@/components/auto-grid";
 import { JsonLd } from "@/components/json-ld";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
@@ -177,6 +178,7 @@ export default async function UsadosPage({
                 hrefAviso={linkWhatsapp(
                   `Hola, busco ${buscado}. Avisenme si les entra uno.`,
                 )}
+                prellenado={prellenadoDesdeFiltros(filtros)}
               />
             </div>
           )}

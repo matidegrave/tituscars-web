@@ -264,7 +264,7 @@ export default async function FichaAutoPage({
         </div>
       )}
 
-      <BusquedaAMedidaDiferida autoSlug={auto.slug} autoTitulo={`${titulo} ${auto.anio}`} className="mt-12" />
+      <BusquedaAMedidaDiferida origen="pie_ficha" autoSlug={auto.slug} className="mt-12" />
     </div>
   );
 }

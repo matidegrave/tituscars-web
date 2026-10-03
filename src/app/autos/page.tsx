@@ -12,6 +12,7 @@ import {
   ID_RESULTADOS,
 } from "@/components/catalogo/buscador-catalogo";
 import { EstadoVacio } from "@/components/catalogo/estado-vacio";
+import { mensajeSimple, prellenadoDesdeFiltros } from "@/lib/aviso-busqueda";
 import { TrackAlMontar } from "@/components/tracking/track-al-montar";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdListaAutos } from "@/lib/json-ld";
@@ -214,7 +215,8 @@ export default async function CatalogoPage({
                   buscado={filtros.q ?? ""}
                   sugerencia={sinResultados.sugerencia}
                   parecidos={sinResultados.parecidos}
-                  hrefAviso={linkWhatsapp(`Hola, busco un ${filtros.q}. Avisenme si les entra uno.`)}
+                  hrefAviso={linkWhatsapp(mensajeSimple(filtros.q ?? ""))}
+                  prellenado={prellenadoDesdeFiltros(filtros)}
                 />
               ) : autos.length > 0 ? (
                 <CatalogoInfinito
@@ -225,7 +227,7 @@ export default async function CatalogoPage({
                   claveFiltros={claveFiltros}
                 />
               ) : (
-                <EstadoVacio />
+                <EstadoVacio prellenado={prellenadoDesdeFiltros(filtros)} />
               )}
             </div>
           </div>

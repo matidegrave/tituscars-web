@@ -13,7 +13,7 @@ const BusquedaAMedida = dynamic(
 
 /** Lugar reservado mientras tanto (misma caja y alto aproximado del form). */
 function Reserva() {
-  return <div aria-hidden="true" className="min-h-[980px] rounded-2xl bg-brand-light sm:min-h-[640px]" />;
+  return <div aria-hidden="true" className="min-h-[1180px] rounded-2xl bg-brand-light sm:min-h-[920px]" />;
 }
 
 export function BusquedaAMedidaDiferida({
