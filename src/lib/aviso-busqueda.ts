@@ -1,5 +1,6 @@
 import { filtrosAParams, type Filtros } from "@/lib/filtros";
 import { nombrePropio, normalizar } from "@/lib/busqueda";
+import { formatMiles } from "@/lib/format";
 
 /**
  * "Te lo buscamos" (tanda 49): un solo formulario en toda la web (sin
@@ -35,6 +36,11 @@ export interface DatosAviso {
   carroceria: string | null;
   /** null = no contestó. */
   entrega: boolean | null;
+  /** El auto que entrega (tanda 49c): sólo con entrega = true, opcionales. */
+  entregaModelo: string;
+  entregaAnio: number | null;
+  /** Sólo dígitos. */
+  entregaKm: string;
   financia: boolean | null;
   detalle: string;
 }
@@ -56,6 +62,9 @@ export const VACIO: DatosAviso = {
   transmision: null,
   carroceria: null,
   entrega: null,
+  entregaModelo: "",
+  entregaAnio: null,
+  entregaKm: "",
   financia: null,
   detalle: "",
 };
@@ -167,14 +176,28 @@ export function construirMensaje(d: DatosAviso): string {
   ].filter(Boolean);
   if (tecnica.length) lineas.push(tecnica.join(" · "));
   const sn = (v: boolean) => (v ? "Sí" : "No");
+  // "Entrego: Gol Trend 1.6 2015, 120.000 km" si contó qué auto; si no, "Entrego un auto: Sí".
+  const entrego = d.entrega ? autoQueEntrega(d) : "";
+  if (entrego) lineas.push(`Entrego: ${entrego}`);
   const pago = [
-    d.entrega !== null && `Entrego un auto: ${sn(d.entrega)}`,
+    d.entrega !== null && !entrego && `Entrego un auto: ${sn(d.entrega)}`,
     d.financia !== null && `Financio: ${sn(d.financia)}`,
   ].filter(Boolean);
   if (pago.length) lineas.push(pago.join(" · "));
   if (d.detalle.trim()) lineas.push(`Detalle: ${d.detalle.trim().replace(/\s+/g, " ")}`);
   lineas.push("Avísenme si entra uno.");
   return lineas.join("\n");
+}
+
+function kmValido(d: DatosAviso): number | null {
+  const n = Number(d.entregaKm);
+  return d.entregaKm && n >= 0 && n <= 2_000_000 ? n : null;
+}
+
+function autoQueEntrega(d: DatosAviso): string {
+  const modeloYAnio = [d.entregaModelo.trim().replace(/\s+/g, " "), d.entregaAnio].filter(Boolean).join(" ");
+  const km = kmValido(d);
+  return [modeloYAnio, km !== null ? `${formatMiles(km)} km` : ""].filter(Boolean).join(", ");
 }
 
 /** Sin JS (y como texto del link antes de hidratar): el mensaje simple de siempre. */
@@ -193,6 +216,9 @@ export function cuerpoBusqueda(
     modelos_buscados: d.modelo.trim().slice(0, 300),
     presupuesto_max: p?.monto ?? null,
     entrega_vehiculo: d.entrega === true,
+    entrega_modelo: d.entrega ? d.entregaModelo.trim().slice(0, 120) || null : null,
+    entrega_anio: d.entrega ? d.entregaAnio : null,
+    entrega_km: d.entrega ? kmValido(d) : null,
     financia: d.financia === true,
     contado: false,
     origen: extra.origen,

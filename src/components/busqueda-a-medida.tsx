@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { formatMiles } from "@/lib/format";
 import {
   CARROCERIAS,
   COMBUSTIBLES,
@@ -56,6 +57,7 @@ export function FormBusqueda({
   const enviarLink = useRef<HTMLAnchorElement>(null);
   const modeloInput = useRef<HTMLInputElement>(null);
   const [anios] = useState(() => aniosElegibles());
+  const [aniosEntrega] = useState(() => aniosElegibles(new Date().getFullYear(), 1995));
 
   function set<K extends keyof DatosAviso>(campo: K, valor: DatosAviso[K]) {
     setDatos((prev) => ({ ...prev, [campo]: valor }));
@@ -63,6 +65,16 @@ export function FormBusqueda({
   /** Chips de una sola opción: tocar la elegida la deselecciona. */
   function alternar<K extends keyof DatosAviso>(campo: K, valor: DatosAviso[K]) {
     setDatos((prev) => ({ ...prev, [campo]: prev[campo] === valor ? VACIO[campo] : valor }));
+  }
+
+  /** "No" (o destildar el "Sí") oculta y limpia el auto que entrega. */
+  function elegirEntrega(valor: boolean) {
+    setDatos((prev) => {
+      const entrega = prev.entrega === valor ? null : valor;
+      return entrega
+        ? { ...prev, entrega }
+        : { ...prev, entrega, entregaModelo: "", entregaAnio: null, entregaKm: "" };
+    });
   }
 
   const valido = datos.modelo.trim().length >= 2;
@@ -202,16 +214,76 @@ export function FormBusqueda({
           ))}
         </Pregunta>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div>
           <Pregunta titulo="¿Entregás un auto?">
-            <Pastilla activa={datos.entrega === true} onClick={() => alternar("entrega", true)}>Sí</Pastilla>
-            <Pastilla activa={datos.entrega === false} onClick={() => alternar("entrega", false)}>No</Pastilla>
+            <Pastilla activa={datos.entrega === true} onClick={() => elegirEntrega(true)}>Sí</Pastilla>
+            <Pastilla activa={datos.entrega === false} onClick={() => elegirEntrega(false)}>No</Pastilla>
           </Pregunta>
-          <Pregunta titulo="¿Financiás?">
-            <Pastilla activa={datos.financia === true} onClick={() => alternar("financia", true)}>Sí</Pastilla>
-            <Pastilla activa={datos.financia === false} onClick={() => alternar("financia", false)}>No</Pastilla>
-          </Pregunta>
+          {/* Qué auto entrega (tanda 49c): se despliega con el "Sí" (alto de 0fr a
+              1fr, sin saltos). Cerrado queda inert: ni foco ni lector de pantalla. */}
+          <div
+            className={`grid transition-[grid-template-rows,opacity,visibility] duration-200 ease-out ${
+              datos.entrega ? "visible grid-rows-[1fr] opacity-100" : "invisible grid-rows-[0fr] opacity-0"
+            }`}
+            inert={!datos.entrega}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl border border-border bg-background p-3">
+                <div className="col-span-2">
+                  <Label htmlFor={`${id}-entrega-modelo`} className="mb-1.5">
+                    Marca y modelo
+                  </Label>
+                  <Input
+                    id={`${id}-entrega-modelo`}
+                    maxLength={120}
+                    autoComplete="off"
+                    placeholder="Ej: Gol Trend 1.6"
+                    value={datos.entregaModelo}
+                    onChange={(e) => set("entregaModelo", e.target.value)}
+                    className="h-11 bg-background text-base md:text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`${id}-entrega-anio`} className="mb-1.5">
+                    Año
+                  </Label>
+                  <select
+                    id={`${id}-entrega-anio`}
+                    value={datos.entregaAnio ?? ""}
+                    onChange={(e) => set("entregaAnio", e.target.value ? Number(e.target.value) : null)}
+                    className={CLASE_SELECT}
+                  >
+                    <option value="">Elegí</option>
+                    {aniosEntrega.map((a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor={`${id}-entrega-km`} className="mb-1.5">
+                    Km
+                  </Label>
+                  <Input
+                    id={`${id}-entrega-km`}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="120.000"
+                    value={formatMiles(datos.entregaKm)}
+                    onChange={(e) => set("entregaKm", e.target.value.replace(/\D/g, "").slice(0, 7))}
+                    className="h-11 bg-background text-base md:text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <Pregunta titulo="¿Financiás?">
+          <Pastilla activa={datos.financia === true} onClick={() => alternar("financia", true)}>Sí</Pastilla>
+          <Pastilla activa={datos.financia === false} onClick={() => alternar("financia", false)}>No</Pastilla>
+        </Pregunta>
 
         <div>
           <Label htmlFor={`${id}-detalle`} className="mb-1.5">
@@ -260,6 +332,9 @@ export function FormBusqueda({
     </form>
   );
 }
+
+const CLASE_SELECT =
+  "h-11 w-full rounded-lg border border-input bg-background px-2.5 text-base font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm";
 
 const CLASE_ENVIAR =
   "flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 text-base font-semibold text-white transition-opacity hover:opacity-90 sm:w-auto sm:px-10";
@@ -310,7 +385,7 @@ function SelectAnio({
       <select
         value={valor ?? ""}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-        className="h-11 w-full rounded-lg border border-input bg-background px-2.5 text-base text-foreground md:text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className={CLASE_SELECT}
       >
         <option value="">Cualquiera</option>
         {anios.map((a) => (
