@@ -12,10 +12,11 @@ import { cn } from "@/lib/utils";
 const BUSCADOR_DE_LA_PAGINA = { compu: "filtro-busqueda", celu: "filtro-busqueda-celu" } as const;
 
 /**
- * Lupa del header (tanda 50), en todas las páginas. Compu: al lado del logo
- * despliega un campo de ~320 px en el mismo header (el menú de texto se oculta
- * mientras tanto, así nada se corre). Celu: a la izquierda del corazón, abre
- * una barra naranja a todo el ancho debajo del header, con una X para cerrar.
+ * Lupa del header (tanda 50), en todas las páginas. Compu: a la izquierda de
+ * "Inicio" (tanda 50b) despliega un campo de ~320 px en el mismo header (el
+ * menú de texto se oculta mientras tanto, así nada se corre); abierta es una X.
+ * Celu: a la izquierda del corazón, abre una barra naranja a todo el ancho
+ * debajo del header, con una X para cerrar.
  *
  * Es un <details> con un <form method="get" action="/autos"> y name="q": sin
  * JS se abre y busca igual. Con JS la lupa abre el <details> y pone el foco
@@ -124,7 +125,12 @@ export function BuscadorHeader({
         onClick={alTocarLupa}
         className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full text-white hover:bg-white/10 [&::-webkit-details-marker]:hidden"
       >
-        <Search className="h-5 w-5" aria-hidden="true" />
+        {/* Compu: abierto, la lupa pasa a ser la X que lo cierra (el campo queda a su derecha). */}
+        {abierto && variante === "compu" ? (
+          <X className="h-5 w-5" aria-hidden="true" />
+        ) : (
+          <Search className="h-5 w-5" aria-hidden="true" />
+        )}
       </summary>
       <form
         role="search"

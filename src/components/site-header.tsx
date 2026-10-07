@@ -35,35 +35,39 @@ export function SiteHeader() {
     // efecto translúcido con blur de la tanda 15).
     <header className="sticky top-0 z-40 bg-brand">
       <div className="mx-auto flex h-[var(--header-h)] max-w-6xl items-center justify-between px-4">
-        <div className="flex shrink-0 items-center gap-2">
-          {/* El logo lleva al catálogo (tanda 47); "Inicio" sigue en el menú. */}
-          <Link href="/autos" className="shrink-0">
-            <Image
-              src="/brand/logo-header.svg"
-              alt="Titus Cars"
-              width={136}
-              height={40}
-              loading="eager"
-              className="h-8 w-auto lg:h-10"
-            />
-          </Link>
-          {/* Lupa de la compu (tanda 50): el campo se despliega a su derecha. */}
-          <BuscadorHeader variante="compu" className="hidden lg:block" />
-        </div>
+        {/* El logo lleva al catálogo (tanda 47); "Inicio" sigue en el menú. */}
+        <Link href="/autos" className="shrink-0">
+          <Image
+            src="/brand/logo-header.svg"
+            alt="Titus Cars"
+            width={136}
+            height={40}
+            loading="eager"
+            className="h-8 w-auto lg:h-10"
+          />
+        </Link>
 
-        {/* Con el buscador abierto, el menú de texto se oculta (el campo ocupa su lugar). */}
-        <nav className="hidden items-center gap-6 lg:flex [header:has([data-buscador-header=compu][open])_&]:invisible">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={esActivo(pathname, link.href) ? "page" : undefined}
-              className="text-sm font-medium text-white decoration-white decoration-2 underline-offset-8 transition-colors hover:text-white/80 aria-[current=page]:underline"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="hidden items-center gap-6 lg:flex">
+          {/* Lupa de la compu (tanda 50b): pegada al menú, a la izquierda de
+              "Inicio". La caja de la lupa (40 px) lleva -mr-2.5 para que del
+              ícono al texto queden los mismos 24 px que entre los ítems. El
+              campo se despliega a su derecha, en el lugar del menú. */}
+          <BuscadorHeader variante="compu" className="-mr-2.5" />
+
+          {/* Con el buscador abierto, el menú de texto se oculta (el campo ocupa su lugar). */}
+          <nav className="flex items-center gap-6 [header:has([data-buscador-header=compu][open])_&]:invisible">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={esActivo(pathname, link.href) ? "page" : undefined}
+                className="text-sm font-medium text-white decoration-white decoration-2 underline-offset-8 transition-colors hover:text-white/80 aria-[current=page]:underline"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
         <div className="hidden items-center gap-2 lg:flex">
           <ContadorFavoritos />
