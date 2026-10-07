@@ -42,6 +42,8 @@ export interface DatosEvento {
    * aviso_sin_stock | favoritos. favorito: agregar | quitar.
    */
   detalle?: string;
+  /** Página desde donde se hizo (busqueda desde el header, tanda 50); si no, la actual. */
+  pagina?: string;
 }
 
 /** Evento estándar de Meta para cada tipo propio (los que no están, sólo van a web_eventos). */
@@ -178,7 +180,7 @@ function dispositivo(): "mobile" | "desktop" {
  * gclid): esos ya viajan en sus propias columnas. Así /links?utm_source=ig
  * queda como pagina "/links".
  */
-function paginaSinCampana(): string {
+export function paginaSinCampana(): string {
   const params = new URLSearchParams(window.location.search);
   for (const k of [...params.keys()]) if (/^utm_|^fbclid$|^gclid$/.test(k)) params.delete(k);
   const q = params.toString();
@@ -221,7 +223,7 @@ export function track(tipo: TipoEvento, datos: DatosEvento = {}) {
       event_id: eventId,
       ...datos,
       url: window.location.href,
-      pagina: paginaSinCampana(),
+      pagina: datos.pagina ?? paginaSinCampana(),
       referrer: document.referrer || undefined,
       session_id: s.session_id,
       utm_source: s.utm_source,

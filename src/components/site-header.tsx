@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
 import { MenuMovil } from "@/components/menu-movil";
 import { ContadorFavoritos } from "@/components/favoritos/contador-favoritos";
+import { BuscadorHeader } from "@/components/buscador-header";
 
 const NAV_LINKS = [
   { href: "/", label: "Inicio" },
@@ -34,19 +35,24 @@ export function SiteHeader() {
     // efecto translúcido con blur de la tanda 15).
     <header className="sticky top-0 z-40 bg-brand">
       <div className="mx-auto flex h-[var(--header-h)] max-w-6xl items-center justify-between px-4">
-        {/* El logo lleva al catálogo (tanda 47); "Inicio" sigue en el menú. */}
-        <Link href="/autos" className="shrink-0">
-          <Image
-            src="/brand/logo-header.svg"
-            alt="Titus Cars"
-            width={136}
-            height={40}
-            loading="eager"
-            className="h-8 w-auto lg:h-10"
-          />
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* El logo lleva al catálogo (tanda 47); "Inicio" sigue en el menú. */}
+          <Link href="/autos" className="shrink-0">
+            <Image
+              src="/brand/logo-header.svg"
+              alt="Titus Cars"
+              width={136}
+              height={40}
+              loading="eager"
+              className="h-8 w-auto lg:h-10"
+            />
+          </Link>
+          {/* Lupa de la compu (tanda 50): el campo se despliega a su derecha. */}
+          <BuscadorHeader variante="compu" className="hidden lg:block" />
+        </div>
 
-        <nav className="hidden items-center gap-6 lg:flex">
+        {/* Con el buscador abierto, el menú de texto se oculta (el campo ocupa su lugar). */}
+        <nav className="hidden items-center gap-6 lg:flex [header:has([data-buscador-header=compu][open])_&]:invisible">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -77,6 +83,7 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-1 lg:hidden">
+          <BuscadorHeader variante="celu" menuAbierto={abierto} onAbrir={() => setAbierto(false)} />
           <ContadorFavoritos />
           <button
             type="button"
