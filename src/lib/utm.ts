@@ -69,7 +69,8 @@ export function hrefConMarca(href: string): string {
     if (url.hostname !== "wa.me") return href;
     const texto = url.searchParams.get("text") ?? "";
     if (texto.endsWith(marca)) return href;
-    url.searchParams.set("text", texto ? `${texto} ${marca}` : marca);
+    // %20 (no "+") como el resto de los links; wa.me sólo usa el parámetro text.
+    url.search = `?text=${encodeURIComponent(texto ? `${texto} ${marca}` : marca)}`;
     return url.toString();
   } catch {
     return href;
