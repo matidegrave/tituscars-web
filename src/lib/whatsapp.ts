@@ -5,10 +5,13 @@ import { esPauta } from "@/lib/origen";
  * Código corto del anuncio para el mensaje (tanda 52): si utm_content empieza
  * con letra(s)+número ("W1 Generico Seg" -> "W1", "C12 …" -> "C12"), sólo eso;
  * si no, utm_content cortado a 25. null sin anuncio.
+ * Tanda 52b: Meta manda el ID numérico del anuncio (120251049306750443) ->
+ * "A" + últimos 6 dígitos ("A750443").
  */
 export function refAnuncio(utmContent: string | null | undefined): string | null {
   const contenido = (utmContent ?? "").trim();
   if (!contenido) return null;
+  if (/^\d{9,}$/.test(contenido)) return `A${contenido.slice(-6)}`;
   return contenido.match(/^[A-Z]{1,2}\d{1,3}\b/)?.[0] ?? contenido.slice(0, 25).trim();
 }
 

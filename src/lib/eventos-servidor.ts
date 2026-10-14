@@ -53,7 +53,7 @@ const DETALLE_MAXIMO = 200;
  *   linea    — "pauta" | "portales" (tanda 51, lo manda el navegador);
  *   anuncio  — utm_content completo de la última llegada paga (tanda 52, de la
  *              cookie tc_anuncio: lo lee el servidor, el Pixel no se toca);
- *   ref      — su código corto ("W1"), el mismo del mensaje de WhatsApp.
+ *   ref      — su código corto ("W1", o "A750443" si es ID numérico de Meta), el mismo del mensaje de WhatsApp.
  * Ej.: {"subtipo":"consulta","linea":"pauta","anuncio":"W1 Generico Seg","ref":"W1"}.
  * Si pasara de 200 se recorta el anuncio (el ref queda entero).
  * Las filas anteriores a la tanda 51 quedan con el subtipo en texto plano.
