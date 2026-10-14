@@ -9,6 +9,7 @@ import { WhatsappFloatingButton } from "@/components/whatsapp-floating-button";
 import { OcultarEn } from "@/components/ocultar-en";
 import { VersionGuard } from "@/components/version-guard";
 import { MetaPixel } from "@/components/tracking/meta-pixel";
+import { CapturaUtm } from "@/components/tracking/captura-utm";
 import { ModoEquipo } from "@/components/modo-equipo";
 import { WhatsappEnApps } from "@/components/whatsapp-en-apps";
 import { TransicionFicha } from "@/components/catalogo/transicion-ficha";
@@ -87,6 +88,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <WhatsappFloatingButton />
         </OcultarEn>
         <VersionGuard />
+        <CapturaUtm />
         <MetaPixel />
         <WhatsappEnApps />
         <TransicionFicha />
