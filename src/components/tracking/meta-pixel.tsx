@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { cargarPixel, pageView, track, type DatosEvento } from "@/lib/tracking";
 
-/** Datos que llevan los links de WhatsApp (data-track-*): auto y subtipo (detalle). */
+/** Datos que llevan los links de WhatsApp (data-track-*): auto, nombre y subtipo (detalle). */
 function datosDelLink(link: HTMLAnchorElement): DatosEvento {
   const valor = Number(link.dataset.trackValor);
   return {
@@ -12,6 +12,7 @@ function datosDelLink(link: HTMLAnchorElement): DatosEvento {
     slug: link.dataset.trackSlug || undefined,
     valor: Number.isFinite(valor) && valor > 0 ? valor : undefined,
     detalle: link.dataset.trackDetalle || undefined,
+    nombre: link.dataset.trackNombre || undefined,
   };
 }
 

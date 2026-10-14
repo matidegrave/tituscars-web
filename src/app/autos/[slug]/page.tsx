@@ -183,7 +183,7 @@ export default async function FichaAutoPage({
 
           <WhatsappCta
             titulo={titulo}
-            trackAuto={{ auto_id: auto.id, slug: auto.slug, valor: auto.precio_ars }}
+            trackAuto={{ auto_id: auto.id, slug: auto.slug, valor: auto.precio_ars, nombre: `${titulo} ${auto.anio}` }}
             precioFormateado={precioFormateado}
             favorito={{
               id: auto.id,

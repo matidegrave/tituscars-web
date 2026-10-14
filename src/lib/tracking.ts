@@ -10,6 +10,7 @@
  */
 
 import { esEquipoCliente } from "@/lib/equipo";
+import { leerUtm } from "@/lib/utm";
 
 export type TipoEvento =
   | "vista_auto"
@@ -213,6 +214,9 @@ export function track(tipo: TipoEvento, datos: DatosEvento = {}) {
       if (datos.nombre) custom.content_name = datos.nombre;
       if (datos.con_baja) custom.con_baja = true;
       if (datos.categoria) custom.content_category = datos.categoria;
+      // Anuncio de origen (lib/utm.ts): permite ver qué anuncio trajo cada Lead.
+      const anuncio = leerUtm().utm_content;
+      if (nombreMeta === "Lead" && anuncio) custom.utm_content = anuncio;
       fbq()?.("track", nombreMeta, custom, { eventID: eventId });
     }
 
