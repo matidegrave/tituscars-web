@@ -1,6 +1,8 @@
 import { debeRegistrar, simular } from "@/lib/entorno";
 import { supabaseServidor } from "@/lib/supabase-servidor";
 import { EVENTO_META, type TipoEvento } from "@/lib/tracking";
+import { COOKIE_ANUNCIO, limpiarUtm } from "@/lib/origen";
+import { refAnuncio } from "@/lib/whatsapp";
 
 // Registro de un evento en el servidor: fila en web_eventos y, si hay
 // META_CAPI_TOKEN, el mismo evento por la Conversions API de Meta con el
@@ -41,23 +43,46 @@ const DETALLES = new Set([
 ]);
 
 const LINEAS = new Set(["pauta", "portales"]);
+/** CHECK de web_eventos.detalle (web_eventos_detalle_largo). */
+const DETALLE_MAXIMO = 200;
 
 /**
- * web_eventos.detalle (texto, máx 60). En general, el subtipo solo
- * ("consulta"). En click_whatsapp con línea (tanda 51), un JSON con los dos:
- * {"subtipo":"consulta","linea":"pauta"} — o {"linea":"pauta"} sin subtipo.
+ * web_eventos.detalle (texto, máx 200). En general, el subtipo solo
+ * ("consulta"). En click_whatsapp, un JSON con lo que haya de:
+ *   subtipo  — "consulta", "interesa"…;
+ *   linea    — "pauta" | "portales" (tanda 51, lo manda el navegador);
+ *   anuncio  — utm_content completo de la última llegada paga (tanda 52, de la
+ *              cookie tc_anuncio: lo lee el servidor, el Pixel no se toca);
+ *   ref      — su código corto ("W1"), el mismo del mensaje de WhatsApp.
+ * Ej.: {"subtipo":"consulta","linea":"pauta","anuncio":"W1 Generico Seg","ref":"W1"}.
+ * Si pasara de 200 se recorta el anuncio (el ref queda entero).
  * Las filas anteriores a la tanda 51 quedan con el subtipo en texto plano.
  */
-function detalleDe(tipo: TipoEvento, c: Cuerpo): string | null {
+function detalleDe(tipo: TipoEvento, c: Cuerpo, request: Request): string | null {
   const subtipo = DETALLES.has(String(c.detalle)) ? String(c.detalle) : null;
-  const linea = tipo === "click_whatsapp" && LINEAS.has(String(c.linea)) ? String(c.linea) : null;
-  if (!linea) return subtipo;
-  return JSON.stringify(subtipo ? { subtipo, linea } : { linea });
+  if (tipo !== "click_whatsapp") return subtipo;
+  const linea = LINEAS.has(String(c.linea)) ? String(c.linea) : undefined;
+  let anuncio = limpiarUtm(leerCookie(request.headers.get("cookie"), COOKIE_ANUNCIO)) || undefined;
+  const ref = refAnuncio(anuncio) ?? undefined;
+  if (!linea && !anuncio) return subtipo;
+  const armar = () => JSON.stringify({ subtipo: subtipo ?? undefined, linea, anuncio, ref });
+  let detalle = armar();
+  while (detalle.length > DETALLE_MAXIMO && anuncio) {
+    anuncio = anuncio.slice(0, -1);
+    detalle = armar();
+  }
+  return detalle.length <= DETALLE_MAXIMO ? detalle : subtipo;
 }
 
 function leerCookie(header: string | null, nombre: string): string | undefined {
   const m = header?.match(new RegExp(`(?:^|;\\s*)${nombre}=([^;]+)`));
-  return m ? decodeURIComponent(m[1]) : undefined;
+  if (!m) return undefined;
+  try {
+    return decodeURIComponent(m[1]);
+  } catch {
+    // %-escape inválido: como si no estuviera (no se pierde el evento)
+    return undefined;
+  }
 }
 
 export async function guardarEvento(tipo: TipoEvento, c: Cuerpo, request: Request) {
@@ -78,7 +103,7 @@ export async function guardarEvento(tipo: TipoEvento, c: Cuerpo, request: Reques
     dispositivo: texto(c.dispositivo, 20),
     resultados: entero(c.resultados, 0, 5000),
     posicion: entero(c.posicion, 1, 5000),
-    detalle: detalleDe(tipo, c),
+    detalle: detalleDe(tipo, c, request),
   };
   if (!debeRegistrar(request)) return simular("web_eventos", fila, request);
   const { error } = await supabaseServidor.from("web_eventos").insert(fila);

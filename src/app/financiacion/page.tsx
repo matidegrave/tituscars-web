@@ -3,8 +3,8 @@ import Image from "next/image";
 import { HeroOscuro } from "@/components/institucional/hero-oscuro";
 import { PasosNumerados } from "@/components/institucional/pasos-numerados";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
-import { linkWhatsapp } from "@/lib/whatsapp";
-import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
+import { linkVenta } from "@/lib/whatsapp";
+import { ventaServidor } from "@/lib/whatsapp-servidor";
 import { ENTIDADES, SITE_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -26,8 +26,8 @@ const REQUISITOS = [
 ];
 
 export default async function FinanciacionPage() {
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
-  const numeroVentas = await numeroVentasServidor();
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
+  const venta = await ventaServidor();
   return (
     <div>
       <HeroOscuro
@@ -83,7 +83,7 @@ export default async function FinanciacionPage() {
             Escribinos y te contamos qué opciones de financiación tenés disponibles.
           </p>
           <a
-            href={linkWhatsapp(numeroVentas, "Hola! Quiero consultar sobre financiación para un auto.")}
+            href={linkVenta(venta, "Hola! Quiero consultar sobre financiación para un auto.")}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 text-sm font-semibold text-white hover:opacity-90"

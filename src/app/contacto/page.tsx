@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { MapPin, Clock } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { InstagramIcon } from "@/components/icons/social-icons";
-import { linkWhatsapp } from "@/lib/whatsapp";
-import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
+import { linkVenta } from "@/lib/whatsapp";
+import { ventaServidor } from "@/lib/whatsapp-servidor";
 import {
   HORARIOS,
   INSTAGRAM_URL,
@@ -25,8 +25,8 @@ const MAPS_EMBED_SRC = `https://www.google.com/maps?q=${encodeURIComponent(CONSU
 const MAPS_DIRECCIONES = MAPS_COMO_LLEGAR;
 
 export default async function ContactoPage() {
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
-  const numeroVentas = await numeroVentasServidor();
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
+  const venta = await ventaServidor();
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <h1 className="text-3xl font-bold tracking-tight">Contacto</h1>
@@ -53,12 +53,12 @@ export default async function ContactoPage() {
             <div>
               <p className="font-medium">WhatsApp</p>
               <a
-                href={linkWhatsapp(numeroVentas)}
+                href={linkVenta(venta)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-muted-foreground underline underline-offset-2 hover:text-brand"
               >
-                {telefonoLegible(numeroVentas)}
+                {telefonoLegible(venta.numero)}
               </a>
             </div>
           </div>
@@ -73,7 +73,7 @@ export default async function ContactoPage() {
 
           <div className="mt-8 flex flex-wrap gap-3">
             <a
-              href={linkWhatsapp(numeroVentas)}
+              href={linkVenta(venta)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 text-sm font-semibold text-white hover:opacity-90"

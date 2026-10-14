@@ -2,6 +2,33 @@ import { WHATSAPP_CONSIGNAS, WHATSAPP_PAUTA, WHATSAPP_VENTAS } from "@/lib/confi
 import { esPauta } from "@/lib/origen";
 
 /**
+ * Código corto del anuncio para el mensaje (tanda 52): si utm_content empieza
+ * con letra(s)+número ("W1 Generico Seg" -> "W1", "C12 …" -> "C12"), sólo eso;
+ * si no, utm_content cortado a 25. null sin anuncio.
+ */
+export function refAnuncio(utmContent: string | null | undefined): string | null {
+  const contenido = (utmContent ?? "").trim();
+  if (!contenido) return null;
+  return contenido.match(/^[A-Z]{1,2}\d{1,3}\b/)?.[0] ?? contenido.slice(0, 25).trim();
+}
+
+/**
+ * WhatsApp de venta de esta visita: el número (pauta o portales) y la
+ * referencia del anuncio que se agrega al final del mensaje (null: sin
+ * anuncio o modo equipo). Lo arma el servidor (lib/whatsapp-servidor.ts).
+ */
+export interface Venta {
+  numero: string;
+  ref: string | null;
+}
+
+/** Link de venta: al número de la visita, con " (ref: W1)" al final si vino por un anuncio. */
+export function linkVenta(venta: Venta, mensaje = MENSAJE_GENERAL): string {
+  const texto = venta.ref && mensaje.trim() ? `${mensaje} (ref: ${venta.ref})` : mensaje;
+  return linkWhatsapp(venta.numero, texto);
+}
+
+/**
  * El WhatsApp de venta para esta visita (tanda 51): el de pauta si llegó por
  * un anuncio (cookie tc_origen=pauta, lib/origen.ts), si no el de ventas de
  * siempre (portales). ÚNICO lugar que decide el número de venta: el servidor
@@ -84,11 +111,11 @@ export function esRutaConsigna(pathname: string | null): boolean {
 
 /**
  * Link de los botones generales (header, menú, flotante, footer): en /consigna
- * va al número de consignas con su mensaje; en el resto, al de venta
- * (`numero`, de numeroVentas()) con `mensaje`.
+ * va al número de consignas con su mensaje; en el resto, al de venta de la
+ * visita (linkVenta) con `mensaje`.
  */
-export function linkWhatsappSegunRuta(pathname: string | null, numero: string, mensaje?: string): string {
+export function linkWhatsappSegunRuta(pathname: string | null, venta: Venta, mensaje?: string): string {
   return esRutaConsigna(pathname)
     ? linkWhatsapp(WHATSAPP_CONSIGNAS, MENSAJE_CONSIGNA)
-    : linkWhatsapp(numero, mensaje);
+    : linkVenta(venta, mensaje);
 }

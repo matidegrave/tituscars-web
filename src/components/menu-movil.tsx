@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { bloquearScroll, desbloquearScroll } from "@/lib/scroll-lock";
 import { usePathname } from "next/navigation";
 import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
-import { useNumeroVentas } from "@/components/linea-whatsapp";
+import { useVenta } from "@/components/linea-whatsapp";
 
 /**
  * Menú del celu superpuesto a la página (no la empuja). Va por portal al
@@ -26,7 +26,7 @@ export function MenuMovil({
   onCerrar: () => void;
 }) {
   const pathname = usePathname();
-  const numeroVentas = useNumeroVentas();
+  const venta = useVenta();
   const porLink = useRef(false);
   const cerrar = useRef(onCerrar);
   useEffect(() => {
@@ -82,7 +82,7 @@ export function MenuMovil({
         <Button
           className="mt-2 w-full"
           nativeButton={false}
-          render={<a href={linkWhatsappSegunRuta(pathname, numeroVentas)} target="_blank" rel="noopener noreferrer" />}
+          render={<a href={linkWhatsappSegunRuta(pathname, venta)} target="_blank" rel="noopener noreferrer" />}
         >
           WhatsApp
         </Button>

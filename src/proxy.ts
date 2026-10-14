@@ -1,12 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { COOKIE_EQUIPO, UN_ANIO_S, valorEquipo } from "@/lib/equipo";
-import { COOKIE_ORIGEN, SIETE_DIAS_S, VALOR_PAUTA, esLlegadaDePauta } from "@/lib/origen";
+import {
+  COOKIE_ANUNCIO,
+  COOKIE_CAMPANA,
+  COOKIE_ORIGEN,
+  SIETE_DIAS_S,
+  VALOR_PAUTA,
+  esLlegadaDePauta,
+  limpiarUtm,
+} from "@/lib/origen";
 
 /**
  * Router de la web antes de renderizar. En orden:
  *
- * 0. Llegada por un anuncio (utm_medium=paid): cookie tc_origen=pauta por 7
- *    días, en la respuesta y ya en ESTE request (ver marcarPauta).
+ * 0. Llegada por un anuncio (utm_medium=paid): cookies tc_origen=pauta,
+ *    tc_anuncio y tc_campana por 7 días, en la respuesta y ya en ESTE request
+ *    (ver marcarPauta).
  * 1. Host: en producción, los *.vercel.app redirigen a tituscars.com (mismo
  *    path y query) para no competir con el dominio en Google. Los previews de
  *    ramas (VERCEL_ENV=preview) no se tocan.
@@ -266,27 +275,40 @@ function bloquearCrawler(request: NextRequest): Response | null {
 // de llegada se renderiza con las cookies del request: sin esto, el primer
 // HTML saldría con el WhatsApp de portales. Una visita sin utm_medium=paid no
 // la toca (ni la renueva ni la borra).
+//
+// Tanda 52: en la misma llegada, utm_content -> tc_anuncio y utm_campaign ->
+// tc_campana (limpios, máx 60). Una llegada paga nueva los pisa (vale el
+// último anuncio que tocó); si no trae alguno de los dos, queda el anterior.
 
-function marcarPauta(request: NextRequest): boolean {
-  if (!esLlegadaDePauta(request.nextUrl.searchParams)) return false;
-  request.cookies.set(COOKIE_ORIGEN, VALOR_PAUTA);
-  return true;
+/** Cookies a poner en esta llegada paga (nombre -> valor), o null si no es una. */
+function marcarPauta(request: NextRequest): Record<string, string> | null {
+  const params = request.nextUrl.searchParams;
+  if (!esLlegadaDePauta(params)) return null;
+  const marcas: Record<string, string> = { [COOKIE_ORIGEN]: VALOR_PAUTA };
+  const anuncio = limpiarUtm(params.get("utm_content"));
+  if (anuncio) marcas[COOKIE_ANUNCIO] = anuncio;
+  const campana = limpiarUtm(params.get("utm_campaign"));
+  if (campana) marcas[COOKIE_CAMPANA] = campana;
+  for (const [nombre, valor] of Object.entries(marcas)) request.cookies.set(nombre, valor);
+  return marcas;
 }
 
 // ─── Proxy ─────────────────────────────────────────────────────────────────────
 
 export async function proxy(request: NextRequest) {
-  const pauta = marcarPauta(request);
+  const marcas = marcarPauta(request);
   const respuesta = await rutear(request);
-  if (pauta && respuesta instanceof NextResponse) {
-    respuesta.cookies.set(COOKIE_ORIGEN, VALOR_PAUTA, {
-      maxAge: SIETE_DIAS_S,
-      path: "/",
-      sameSite: "lax",
-      secure: true,
-      // Sólo la lee el servidor (layout y páginas arman los links).
-      httpOnly: true,
-    });
+  if (marcas && respuesta instanceof NextResponse) {
+    for (const [nombre, valor] of Object.entries(marcas)) {
+      respuesta.cookies.set(nombre, valor, {
+        maxAge: SIETE_DIAS_S,
+        path: "/",
+        sameSite: "lax",
+        secure: true,
+        // Sólo las lee el servidor (layout, páginas y /api/track).
+        httpOnly: true,
+      });
+    }
   }
   return respuesta;
 }

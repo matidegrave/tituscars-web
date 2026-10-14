@@ -18,7 +18,7 @@ import { COOKIE_EQUIPO, esValorEquipo } from "@/lib/equipo";
 import { SCRIPT_REPORTE_ERRORES } from "@/lib/reporte-errores-script";
 import { PIXEL_ID, SNIPPET_PIXEL } from "@/lib/tracking";
 import { SITE_URL } from "@/lib/config";
-import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
+import { ventaServidor } from "@/lib/whatsapp-servidor";
 
 // Una sola fuente (Geist, la de todo el texto), con swap y preload. Geist Mono
 // se sacó: no la usaba ningún elemento y se precargaba igual en cada página.
@@ -65,8 +65,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // vuelve a chequear en el navegador (cookie o respaldo en localStorage).
   const equipo = esValorEquipo((await cookies()).get(COOKIE_EQUIPO)?.value);
   const pixelActivo = pixelDeProduccion && !equipo;
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
-  const numeroVentas = await numeroVentasServidor();
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
+  const venta = await ventaServidor();
   return (
     <html
       lang="es"
@@ -80,7 +80,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {pixelActivo && <script dangerouslySetInnerHTML={{ __html: SNIPPET_PIXEL(PIXEL_ID) }} />}
       </head>
       <body className="flex min-h-full flex-col">
-        <LineaWhatsapp numero={numeroVentas}>
+        <LineaWhatsapp venta={venta}>
           {/* /links (bio de Instagram/TikTok) va sola, sin el marco del sitio. */}
           <OcultarEn rutas={RUTAS_SIN_MARCO}>
             <SiteHeader />

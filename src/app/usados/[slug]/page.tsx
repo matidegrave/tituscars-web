@@ -24,8 +24,8 @@ import {
   textoPagina,
   tituloPagina,
 } from "@/lib/usados-textos";
-import { linkWhatsapp } from "@/lib/whatsapp";
-import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
+import { linkVenta } from "@/lib/whatsapp";
+import { ventaServidor } from "@/lib/whatsapp-servidor";
 import { CatalogoInfinito } from "@/components/catalogo/catalogo-infinito";
 import { SinResultados } from "@/components/catalogo/sin-resultados";
 import { prellenadoDesdeFiltros } from "@/lib/aviso-busqueda";
@@ -108,8 +108,8 @@ export default async function UsadosPage({
   const { slug } = await params;
   const { p, autosPagina } = await cargar(slug);
   const filtros = filtrosDe(p);
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
-  const numeroVentas = await numeroVentasServidor();
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
+  const venta = await ventaServidor();
   const resultado = await getAutosPaginados(filtros);
   const autos = await conColores(resultado.autos);
   const { total } = resultado;
@@ -178,8 +178,8 @@ export default async function UsadosPage({
                 }
                 sugerencia={null}
                 parecidos={similares}
-                hrefAviso={linkWhatsapp(
-                  numeroVentas,
+                hrefAviso={linkVenta(
+                  venta,
                   `Hola, busco ${buscado}. Avisenme si les entra uno.`,
                 )}
                 prellenado={prellenadoDesdeFiltros(filtros)}

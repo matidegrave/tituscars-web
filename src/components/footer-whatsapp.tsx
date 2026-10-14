@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { WHATSAPP_CONSIGNAS, telefonoLegible } from "@/lib/config";
 import { esRutaConsigna, linkWhatsappSegunRuta } from "@/lib/whatsapp";
-import { useNumeroVentas } from "@/components/linea-whatsapp";
+import { useVenta } from "@/components/linea-whatsapp";
 
 /**
  * Teléfono del footer: en /consigna, el WhatsApp de consignaciones; en el
@@ -11,15 +11,15 @@ import { useNumeroVentas } from "@/components/linea-whatsapp";
  */
 export function FooterWhatsapp({ className }: { className?: string }) {
   const pathname = usePathname();
-  const numeroVentas = useNumeroVentas();
+  const venta = useVenta();
   return (
     <a
-      href={linkWhatsappSegunRuta(pathname, numeroVentas)}
+      href={linkWhatsappSegunRuta(pathname, venta)}
       target="_blank"
       rel="noopener noreferrer"
       className={className}
     >
-      {telefonoLegible(esRutaConsigna(pathname) ? WHATSAPP_CONSIGNAS : numeroVentas)}
+      {telefonoLegible(esRutaConsigna(pathname) ? WHATSAPP_CONSIGNAS : venta.numero)}
     </a>
   );
 }

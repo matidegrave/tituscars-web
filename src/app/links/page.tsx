@@ -10,8 +10,8 @@ import {
   TIKTOK_URL,
   WHATSAPP_CONSIGNAS,
 } from "@/lib/config";
-import { linkWhatsapp } from "@/lib/whatsapp";
-import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
+import { linkVenta, linkWhatsapp } from "@/lib/whatsapp";
+import { ventaServidor } from "@/lib/whatsapp-servidor";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import {
   GoogleMapsIcon,
@@ -78,8 +78,8 @@ interface Boton {
 
 export default async function LinksPage({ searchParams }: PageProps<"/links">) {
   const sp = await searchParams;
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
-  const numeroVentas = await numeroVentasServidor();
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
+  const venta = await ventaServidor();
   // Dentro de TikTok (no deja abrir WhatsApp) se avisa arriba desde el HTML
   // del servidor, sin que la página salte al cargar.
   const enTikTok = navegadorDeApp((await headers()).get("user-agent") ?? "") === "tiktok";
@@ -108,7 +108,7 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
     },
     {
       texto: "Quiero comprar un auto",
-      href: linkWhatsapp(numeroVentas, "Hola! Quiero comprar un auto."),
+      href: linkVenta(venta, "Hola! Quiero comprar un auto."),
       estilo: "verde",
       icono: <WhatsappIcon className="h-6 w-6" />,
       externo: true,
