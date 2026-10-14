@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { useRutaVisible } from "@/lib/ruta-visible";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ function esActivo(pathname: string, href: string): boolean {
 
 export function SiteHeader() {
   const [abierto, setAbierto] = useState(false);
-  const pathname = usePathname();
+  const pathname = useRutaVisible();
   const venta = useVenta();
 
   return (

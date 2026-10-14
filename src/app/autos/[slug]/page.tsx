@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
-import { getAutoPorSlug, getSimilares, getSlugActualPorSufijo } from "@/lib/autos";
+import { getAutoPorSlug, getResumenStock, getSimilares, getSlugActualPorSufijo } from "@/lib/autos";
 import type { AutoCatalogo } from "@/lib/types";
 import { bajaDePrecio, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
 import { FichaGallery } from "@/components/ficha/gallery";
@@ -20,10 +19,19 @@ import { TrackVistaAuto } from "@/components/tracking/track-vista-auto";
 import { CalendarDays, Car, Fuel, Gauge, Settings2 } from "lucide-react";
 import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
-import { linkVenta, mensajeConsultaAuto } from "@/lib/whatsapp";
-import { ventaServidor } from "@/lib/whatsapp-servidor";
+import { mensajeConsultaAuto } from "@/lib/whatsapp";
 
-export const revalidate = 60;
+// ISR: la ficha se arma una vez y se sirve del caché de Vercel, regenerándose
+// cada 5 min (precio, estado, fotos). Las de los autos publicados se generan en
+// el build; un auto nuevo se genera en su primera visita (dynamicParams). Un
+// slug que ya no existe no llega acá: lo resuelve el proxy (308 o 404).
+export const revalidate = 300;
+export const dynamicParams = true;
+
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  const autos = await getResumenStock();
+  return autos.map((a) => ({ slug: a.slug }));
+}
 
 /**
  * Busca el auto y, si el slug no existe, resuelve antes de renderizar nada:
@@ -84,14 +92,9 @@ export default async function FichaAutoPage({
 
   const similares = await getSimilares(auto).then(conColores);
 
-  // Link de la ficha con el dominio por el que entró el cliente, para el
-  // mensaje de WhatsApp (el <a href> se arma acá, en el servidor).
-  const encabezados = await headers();
-  const host = encabezados.get("x-forwarded-host") ?? encabezados.get("host") ?? "";
-  const protocolo = encabezados.get("x-forwarded-proto") ?? "https";
-  const urlFicha = `${protocolo}://${host}/autos/${auto.slug}`;
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
-  const venta = await ventaServidor();
+  // Link de la ficha para el mensaje de WhatsApp. Siempre el dominio (no el
+  // host del request: leer headers() haría la ficha dinámica).
+  const urlFicha = `${SITE_URL}/autos/${auto.slug}`;
   const titulo = tituloAuto(auto);
   const precioFormateado = formatPrecio(auto.precio, auto.moneda);
   const baja = bajaDePrecio(auto);
@@ -207,37 +210,28 @@ export default async function FichaAutoPage({
               {
                 texto: "Tengo un auto para entregar",
                 detalle: "permuta",
-                href: linkVenta(
-                  venta,
-                  `Hola, me interesa el ${titulo} ${auto.anio} y tengo un auto para entregar: ${urlFicha}`
-                ),
+                mensaje: `Hola, me interesa el ${titulo} ${auto.anio} y tengo un auto para entregar: ${urlFicha}`,
               },
               {
                 texto: "Quiero financiarlo",
                 detalle: "financiar",
-                href: linkVenta(
-                  venta,
-                  `Hola, me interesa financiar el ${titulo} ${auto.anio} (${precioFormateado}). ¿Qué opciones tengo? ${urlFicha}`
-                ),
+                mensaje: `Hola, me interesa financiar el ${titulo} ${auto.anio} (${precioFormateado}). ¿Qué opciones tengo? ${urlFicha}`,
               },
               {
                 texto: "¡Me interesa!",
                 detalle: "interesa",
-                href: linkVenta(venta, `Hola, me interesa el ${titulo} ${auto.anio} (${precioFormateado}). ${urlFicha}`),
+                mensaje: `Hola, me interesa el ${titulo} ${auto.anio} (${precioFormateado}). ${urlFicha}`,
               },
             ]}
-            hrefWhatsapp={linkVenta(
-              venta,
-              mensajeConsultaAuto({
-                titulo,
-                anio: auto.anio,
-                datos: [formatKm(auto.km), auto.combustible, precioFormateado]
-                  .filter(Boolean)
-                  .join(" · "),
-                url: urlFicha,
-                conCita: auto.disponibilidad === "cita",
-              })
-            )}
+            mensajeWhatsapp={mensajeConsultaAuto({
+              titulo,
+              anio: auto.anio,
+              datos: [formatKm(auto.km), auto.combustible, precioFormateado]
+                .filter(Boolean)
+                .join(" · "),
+              url: urlFicha,
+              conCita: auto.disponibilidad === "cita",
+            })}
           />
 
           <FichaTecnica auto={auto} />

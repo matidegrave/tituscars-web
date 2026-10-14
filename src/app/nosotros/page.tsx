@@ -16,8 +16,7 @@ import {
   YOUTUBE_URL,
 } from "@/lib/config";
 import { DIVERSION, HISTORIA, type VideoInstagram } from "@/lib/historia";
-import { linkVenta } from "@/lib/whatsapp";
-import { ventaServidor } from "@/lib/whatsapp-servidor";
+import { LinkVenta } from "@/components/linea-whatsapp";
 
 // /nosotros (tanda 44): la historia de Titus en una línea de tiempo con sus
 // reels de Instagram, que se ven dentro de la página (ReelEmbed: fachada
@@ -31,7 +30,7 @@ export const metadata: Metadata = {
     "La historia de Titus Cars: desde el primer auto que compramos hasta nuestro local en Av. Duarte Quirós 3996, Córdoba. Autos usados peritados y consigna virtual.",
 };
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 /** 1 video: solo. 2 o más: fila horizontal con scroll-snap (sin librerías). */
 function Videos({ videos, fecha }: { videos: VideoInstagram[]; fecha?: string }) {
@@ -49,8 +48,6 @@ function Videos({ videos, fecha }: { videos: VideoInstagram[]; fecha?: string })
 
 export default async function NosotrosPage() {
   const enStock = await getTotalEnStock();
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
-  const venta = await ventaServidor();
 
   const numeros = [
     { valor: `+${AUTOS_VENDIDOS}`, label: "Autos vendidos" },
@@ -159,15 +156,14 @@ export default async function NosotrosPage() {
             <span>{HORARIOS}</span>
           </li>
         </ul>
-        <a
-          href={linkVenta(venta)}
+        <LinkVenta
           target="_blank"
           rel="noopener noreferrer"
           className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-6 text-base font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex sm:w-auto"
         >
           <WhatsappIcon className="h-5 w-5" />
           Escribinos por WhatsApp
-        </a>
+        </LinkVenta>
 
         <h3 className="mt-10 text-lg font-bold tracking-tight">Seguinos</h3>
         <div className="mt-3 flex items-center gap-4">

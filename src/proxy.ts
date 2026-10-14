@@ -9,6 +9,7 @@ import {
   esLlegadaDePauta,
   limpiarUtm,
 } from "@/lib/origen";
+import { codificarClave, queryCanonica } from "@/lib/filtros";
 
 /**
  * Router de la web antes de renderizar. En orden:
@@ -32,6 +33,8 @@ import {
  *    Tienda Nube que no está en la lista). Nunca 404.
  * 6. Si sólo cambió la barra o el prefijo: 308 a la ruta limpia.
  * 7. Fichas de auto (/autos/:slug), ver resolverFicha.
+ * 8. Catálogo con filtros (/autos?marca=…): rewrite a /catalogo/<clave>, su
+ *    página en caché (ver catalogoEnCache).
  */
 
 const DOMINIO = "https://tituscars.com";
@@ -111,13 +114,14 @@ function redireccion(request: NextRequest, pathname: string): NextResponse | nul
 // - slug que existe: sigue a la página normal;
 // - slug viejo (se editó el auto: cambia marca/modelo/versión/año pero no los
 //   6 caracteres finales, que son el inicio del id): 308 al slug actual;
-// - slug que no existe más: reescribe a una ruta inexistente para que Next
-//   sirva el 404 raíz (app/not-found.tsx) renderizado en el servidor, con
-//   status 404. Un notFound() tirado desde la página, en cambio, sale como un
-//   documento vacío que arma el cliente (pantalla en blanco sin JS).
-// El slug viaja en x-ficha-slug para que el 404 ofrezca autos parecidos.
+// - slug que no existe más: reescribe, con status 404, a
+//   /ficha-no-disponible/<slug> ("ya no está disponible" + autos parecidos,
+//   ISR). Un notFound() tirado desde la página, en cambio, sale como un
+//   documento vacío que arma el cliente (pantalla en blanco sin JS). Antes el
+//   slug viajaba en el header x-ficha-slug al 404 raíz, pero leer headers() en
+//   un not-found hace dinámicas TODAS las páginas.
 
-const RUTA_404 = "/ficha-no-disponible";
+const RUTA_NO_DISPONIBLE = "/ficha-no-disponible";
 const VIGENCIA_MS = 60 * 1000;
 
 type AutoSlug = { id: string; slug: string };
@@ -146,9 +150,7 @@ async function slugsVigentes(forzar: boolean): Promise<AutoSlug[] | null> {
 }
 
 async function resolverFicha(request: NextRequest, slug: string): Promise<NextResponse> {
-  const headers = new Headers(request.headers);
-  headers.set("x-ficha-slug", slug.slice(0, 200));
-  const seguir = () => NextResponse.next({ request: { headers } });
+  const seguir = () => NextResponse.next({ request: { headers: request.headers } });
 
   let autos = await slugsVigentes(false);
   if (autos && !autos.some((a) => a.slug === slug)) autos = await slugsVigentes(true);
@@ -166,7 +168,12 @@ async function resolverFicha(request: NextRequest, slug: string): Promise<NextRe
     }
   }
 
-  return NextResponse.rewrite(urlDestino(request, RUTA_404), { request: { headers } });
+  // Sólo letras, números y guiones: es una ruta y una clave de caché.
+  const limpio = slug.toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 200) || "auto";
+  return NextResponse.rewrite(urlDestino(request, `${RUTA_NO_DISPONIBLE}/${limpio}`), {
+    status: 404,
+    request: { headers: request.headers },
+  });
 }
 
 // ─── Rutas propias ─────────────────────────────────────────────────────────────
@@ -279,6 +286,38 @@ function bloquearCrawler(request: NextRequest): Response | null {
 // Tanda 52: en la misma llegada, utm_content -> tc_anuncio y utm_campaign ->
 // tc_campana (limpios, máx 60). Una llegada paga nueva los pisa (vale el
 // último anuncio que tocó); si no trae alguno de los dos, queda el anterior.
+//
+// Legibles desde JS (oct-2026): el WhatsApp de la visita lo resuelve el
+// navegador (components/linea-whatsapp.tsx) para que las páginas sean
+// estáticas. Hasta esa tanda eran httpOnly: a quien todavía tiene las viejas
+// se le vuelven a poner una vez, legibles (ver migrarCookies).
+
+const COOKIES_PAUTA = [COOKIE_ORIGEN, COOKIE_ANUNCIO, COOKIE_CAMPANA];
+const OPCIONES_PAUTA = {
+  maxAge: SIETE_DIAS_S,
+  path: "/",
+  sameSite: "lax",
+  secure: true,
+  httpOnly: false,
+} as const;
+
+/**
+ * Marca de que las cookies de pauta de este navegador ya son legibles. Sin
+ * ella y con alguna cookie de pauta (de antes, httpOnly), se reponen igual
+ * pero legibles. Se puede sacar cuando vencen las viejas (7 días después del
+ * deploy de esta tanda).
+ */
+const COOKIE_LEGIBLES = "tc_pauta_js";
+
+function migrarCookies(request: NextRequest, respuesta: NextResponse) {
+  if (request.cookies.has(COOKIE_LEGIBLES)) return;
+  const viejas = COOKIES_PAUTA.filter((n) => request.cookies.has(n));
+  if (viejas.length === 0) return;
+  for (const nombre of viejas) {
+    respuesta.cookies.set(nombre, request.cookies.get(nombre)!.value, OPCIONES_PAUTA);
+  }
+  respuesta.cookies.set(COOKIE_LEGIBLES, "1", OPCIONES_PAUTA);
+}
 
 /** Cookies a poner en esta llegada paga (nombre -> valor), o null si no es una. */
 function marcarPauta(request: NextRequest): Record<string, string> | null {
@@ -298,16 +337,14 @@ function marcarPauta(request: NextRequest): Record<string, string> | null {
 export async function proxy(request: NextRequest) {
   const marcas = marcarPauta(request);
   const respuesta = await rutear(request);
-  if (marcas && respuesta instanceof NextResponse) {
-    for (const [nombre, valor] of Object.entries(marcas)) {
-      respuesta.cookies.set(nombre, valor, {
-        maxAge: SIETE_DIAS_S,
-        path: "/",
-        sameSite: "lax",
-        secure: true,
-        // Sólo las lee el servidor (layout, páginas y /api/track).
-        httpOnly: true,
-      });
+  if (respuesta instanceof NextResponse) {
+    if (marcas) {
+      for (const [nombre, valor] of Object.entries(marcas)) {
+        respuesta.cookies.set(nombre, valor, OPCIONES_PAUTA);
+      }
+      respuesta.cookies.set(COOKIE_LEGIBLES, "1", OPCIONES_PAUTA);
+    } else {
+      migrarCookies(request, respuesta);
     }
   }
   return respuesta;
@@ -380,11 +417,42 @@ async function rutear(request: NextRequest): Promise<Response> {
   const ficha = pathname.match(/^\/autos\/([^/]+)$/);
   if (ficha) return resolverFicha(request, decodeURIComponent(ficha[1]));
 
+  // 8. Catálogo con filtros
+  if (pathname === "/autos") {
+    const enCache = catalogoEnCache(request);
+    if (enCache) return enCache;
+  }
+
   // Con las cookies del request (puede traer la de pauta recién puesta).
   return NextResponse.next({ request: { headers: request.headers } });
 }
 
+// ─── Catálogo con filtros en caché ───────────────────────────────────────────
+//
+// /autos lee los filtros de la query: si la página los leyera de searchParams
+// sería dinámica y se renderizaría en CADA visita (era el grueso del consumo
+// de Vercel). En cambio, /autos es estática (sin filtros) y cada combinación
+// de filtros se reescribe a /catalogo/<clave>, una página ISR por combinación:
+// la primera visita la genera y las siguientes salen del caché. El navegador
+// sigue viendo /autos?…. La clave es la query CANÓNICA (lib/filtros.ts): sin
+// utm_*, fbclid ni ?page=, así un anuncio no crea una entrada por click.
+// Una query sin filtros (sólo utm, fbclid…) sirve /autos tal cual.
+function catalogoEnCache(request: NextRequest): NextResponse | null {
+  if (request.nextUrl.search.length <= 1) return null;
+  const query = queryCanonica(request.nextUrl.searchParams);
+  if (!query) return null;
+  return NextResponse.rewrite(urlDestino(request, `/catalogo/${codificarClave(query)}`), {
+    request: { headers: request.headers },
+  });
+}
+
 export const config = {
-  // Todo menos los assets de Next (JS/CSS con hash e imágenes optimizadas).
-  matcher: ["/((?!_next/static|_next/image).*)"],
+  // Todo menos los assets de Next (JS/CSS con hash e imágenes optimizadas) y
+  // los archivos estáticos (imágenes, íconos, videos, fuentes, robots.txt,
+  // sitemap.xml, manifest): no necesitan ninguna regla y cada invocación del
+  // proxy se cobra. Las URLs viejas de Tienda Nube (.html y sin extensión)
+  // siguen pasando por acá.
+  matcher: [
+    "/((?!_next/static|_next/image|.*\\.(?:png|jpe?g|gif|webp|avif|svg|ico|mp4|webm|woff2?|ttf|css|js|map|txt|xml|webmanifest)$).*)",
+  ],
 };
