@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { useNumeroVentas } from "@/components/linea-whatsapp";
 import { formatMiles } from "@/lib/format";
 import {
   CARROCERIAS,
@@ -78,7 +79,8 @@ export function FormBusqueda({
   }
 
   const valido = datos.modelo.trim().length >= 2;
-  const link = linkWhatsapp(valido ? construirMensaje(datos) : "");
+  const numeroVentas = useNumeroVentas();
+  const link = linkWhatsapp(numeroVentas, valido ? construirMensaje(datos) : "");
 
   function alEnviar(e: React.MouseEvent<HTMLAnchorElement>) {
     // Bot: se hace como que salió bien, sin guardar ni abrir nada.

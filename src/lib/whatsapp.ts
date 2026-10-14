@@ -1,4 +1,26 @@
-import { WHATSAPP_CONSIGNAS, WHATSAPP_VENTAS } from "@/lib/config";
+import { WHATSAPP_CONSIGNAS, WHATSAPP_PAUTA, WHATSAPP_VENTAS } from "@/lib/config";
+import { esPauta } from "@/lib/origen";
+
+/**
+ * El WhatsApp de venta para esta visita (tanda 51): el de pauta si llegó por
+ * un anuncio (cookie tc_origen=pauta, lib/origen.ts), si no el de ventas de
+ * siempre (portales). ÚNICO lugar que decide el número de venta: el servidor
+ * lo llama con la cookie (lib/whatsapp-servidor.ts) y los componentes de
+ * cliente lo reciben ya resuelto del layout (components/linea-whatsapp.tsx),
+ * así el link sale bien en el HTML, sin JS. Consignas no pasa por acá.
+ */
+export function numeroVentas(valorCookieOrigen: string | null | undefined): string {
+  return esPauta(valorCookieOrigen) ? WHATSAPP_PAUTA : WHATSAPP_VENTAS;
+}
+
+export type LineaWhatsapp = "pauta" | "portales";
+
+/** Línea de un número (para medir): pauta, portales (ventas) o null (consignas u otro). */
+export function lineaDeNumero(numero: string): LineaWhatsapp | null {
+  if (numero === WHATSAPP_PAUTA) return "pauta";
+  if (numero === WHATSAPP_VENTAS) return "portales";
+  return null;
+}
 
 /**
  * Mensaje de consulta por un auto, en una línea: "Hola, ¿cómo estás? Me
@@ -44,11 +66,12 @@ export function sinEmojis(texto: string): string {
  */
 export const MENSAJE_GENERAL = "Hola, ¿cómo estás? Estuve viendo el catálogo web y quería hacer una consulta.";
 
-/** Link a wa.me con el mensaje prearmado. Por defecto, el general al número de ventas. */
-export function linkWhatsapp(
-  mensaje = MENSAJE_GENERAL,
-  numero: string = WHATSAPP_VENTAS
-): string {
+/**
+ * Link a wa.me con el mensaje prearmado. El número va siempre explícito: el de
+ * venta sale de numeroVentas() (sin default, para que nada caiga en portales
+ * por olvido).
+ */
+export function linkWhatsapp(numero: string, mensaje = MENSAJE_GENERAL): string {
   return `https://wa.me/${numero}?text=${encodeURIComponent(sinEmojis(mensaje))}`;
 }
 
@@ -60,11 +83,12 @@ export function esRutaConsigna(pathname: string | null): boolean {
 }
 
 /**
- * Link de los botones generales (header, menú, flotante): en /consigna va al
- * número de consignas con su mensaje; en el resto, al de ventas con `mensaje`.
+ * Link de los botones generales (header, menú, flotante, footer): en /consigna
+ * va al número de consignas con su mensaje; en el resto, al de venta
+ * (`numero`, de numeroVentas()) con `mensaje`.
  */
-export function linkWhatsappSegunRuta(pathname: string | null, mensaje?: string): string {
+export function linkWhatsappSegunRuta(pathname: string | null, numero: string, mensaje?: string): string {
   return esRutaConsigna(pathname)
-    ? linkWhatsapp(MENSAJE_CONSIGNA, WHATSAPP_CONSIGNAS)
-    : linkWhatsapp(mensaje);
+    ? linkWhatsapp(WHATSAPP_CONSIGNAS, MENSAJE_CONSIGNA)
+    : linkWhatsapp(numero, mensaje);
 }

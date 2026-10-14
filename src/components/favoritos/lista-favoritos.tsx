@@ -9,6 +9,7 @@ import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { leerFavoritos, quitarFavorito, suscribirFavoritos, type Favorito } from "@/lib/favoritos";
 import { formatPrecio, tituloAuto } from "@/lib/format";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { useNumeroVentas } from "@/components/linea-whatsapp";
 import { SITE_URL } from "@/lib/config";
 import type { AutoCatalogo } from "@/lib/types";
 
@@ -34,6 +35,7 @@ export function mensajeFavoritos(autos: AutoCatalogo[]): string {
 
 export function ListaFavoritos() {
   const favoritos = useSyncExternalStore(suscribirFavoritos, leerFavoritos, () => sinFavoritos);
+  const numeroVentas = useNumeroVentas();
   // En el server y al hidratar no se sabe qué hay guardado: "Cargando".
   const hidratado = useSyncExternalStore(nada, () => true, () => false);
   // Datos actuales de los guardados.
@@ -94,7 +96,7 @@ export function ListaFavoritos() {
 
       {disponibles.length > 0 && (
         <a
-          href={linkWhatsapp(mensajeFavoritos(disponibles))}
+          href={linkWhatsapp(numeroVentas, mensajeFavoritos(disponibles))}
           target="_blank"
           rel="noopener noreferrer"
           data-track-detalle="favoritos"

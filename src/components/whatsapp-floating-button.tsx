@@ -2,12 +2,14 @@
 
 import { usePathname } from "next/navigation";
 import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
+import { useNumeroVentas } from "@/components/linea-whatsapp";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 
 const RUTA_FICHA = /^\/autos\/[^/]+$/;
 
 export function WhatsappFloatingButton() {
   const pathname = usePathname();
+  const numeroVentas = useNumeroVentas();
 
   if (RUTA_FICHA.test(pathname)) {
     return null;
@@ -15,7 +17,7 @@ export function WhatsappFloatingButton() {
 
   return (
     <a
-      href={linkWhatsappSegunRuta(pathname)}
+      href={linkWhatsappSegunRuta(pathname, numeroVentas)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Escribinos por WhatsApp"

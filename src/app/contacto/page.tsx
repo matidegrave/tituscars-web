@@ -3,13 +3,14 @@ import { MapPin, Clock } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { InstagramIcon } from "@/components/icons/social-icons";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
 import {
   HORARIOS,
   INSTAGRAM_URL,
   RESENAS_URL,
   DIRECCION,
   SITE_URL,
-  TELEFONO_DISPLAY,
+  telefonoLegible,
   MAPS_COMO_LLEGAR,
 } from "@/lib/config";
 
@@ -23,7 +24,9 @@ const CONSULTA_TITULO = `Titus Cars, ${DIRECCION}`;
 const MAPS_EMBED_SRC = `https://www.google.com/maps?q=${encodeURIComponent(CONSULTA_TITULO)}&output=embed`;
 const MAPS_DIRECCIONES = MAPS_COMO_LLEGAR;
 
-export default function ContactoPage() {
+export default async function ContactoPage() {
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
+  const numeroVentas = await numeroVentasServidor();
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <h1 className="text-3xl font-bold tracking-tight">Contacto</h1>
@@ -50,12 +53,12 @@ export default function ContactoPage() {
             <div>
               <p className="font-medium">WhatsApp</p>
               <a
-                href={linkWhatsapp()}
+                href={linkWhatsapp(numeroVentas)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-muted-foreground underline underline-offset-2 hover:text-brand"
               >
-                {TELEFONO_DISPLAY}
+                {telefonoLegible(numeroVentas)}
               </a>
             </div>
           </div>
@@ -70,7 +73,7 @@ export default function ContactoPage() {
 
           <div className="mt-8 flex flex-wrap gap-3">
             <a
-              href={linkWhatsapp()}
+              href={linkWhatsapp(numeroVentas)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 text-sm font-semibold text-white hover:opacity-90"

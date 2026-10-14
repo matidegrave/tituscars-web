@@ -13,9 +13,12 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://tituscars.
 
 // Números de WhatsApp (sólo dígitos, formato wa.me). Vienen de variables de
 // entorno de Vercel; ningún componente arma un número por su cuenta.
-// - ventas: todo el sitio;
+// - ventas: todo el sitio (la línea "portales");
+// - pauta: el de ventas para las visitas que vienen de un anuncio de Meta
+//   (tanda 51, ver lib/origen.ts). Nadie lo usa directo: sale de numeroVentas();
 // - consignas: /consigna (si faltara la variable, cae en el de ventas).
 export const WHATSAPP_VENTAS = process.env.NEXT_PUBLIC_WHATSAPP ?? "";
+export const WHATSAPP_PAUTA = process.env.NEXT_PUBLIC_WHATSAPP_PAUTA || "5493515303712";
 export const WHATSAPP_CONSIGNAS = process.env.NEXT_PUBLIC_WHATSAPP_CONSIGNAS || WHATSAPP_VENTAS;
 
 /** "5493515303698" -> "+54 9 351 530-3698" (celulares de Argentina, 13 dígitos). */

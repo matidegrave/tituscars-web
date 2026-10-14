@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
+import { useNumeroVentas } from "@/components/linea-whatsapp";
 import { MenuMovil } from "@/components/menu-movil";
 import { ContadorFavoritos } from "@/components/favoritos/contador-favoritos";
 import { BuscadorHeader } from "@/components/buscador-header";
@@ -29,6 +30,7 @@ function esActivo(pathname: string, href: string): boolean {
 export function SiteHeader() {
   const [abierto, setAbierto] = useState(false);
   const pathname = usePathname();
+  const numeroVentas = useNumeroVentas();
 
   return (
     // Naranja sólido siempre, también al scrollear (tanda 48: se sacó el
@@ -76,7 +78,7 @@ export function SiteHeader() {
             nativeButton={false}
             render={
               <a
-                href={linkWhatsappSegunRuta(pathname)}
+                href={linkWhatsappSegunRuta(pathname, numeroVentas)}
                 target="_blank"
                 rel="noopener noreferrer"
               />

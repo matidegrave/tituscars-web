@@ -17,6 +17,7 @@ import {
 } from "@/lib/config";
 import { DIVERSION, HISTORIA, type VideoInstagram } from "@/lib/historia";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
 
 // /nosotros (tanda 44): la historia de Titus en una línea de tiempo con sus
 // reels de Instagram, que se ven dentro de la página (ReelEmbed: fachada
@@ -48,6 +49,8 @@ function Videos({ videos, fecha }: { videos: VideoInstagram[]; fecha?: string })
 
 export default async function NosotrosPage() {
   const enStock = await getTotalEnStock();
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
+  const numeroVentas = await numeroVentasServidor();
 
   const numeros = [
     { valor: `+${AUTOS_VENDIDOS}`, label: "Autos vendidos" },
@@ -157,7 +160,7 @@ export default async function NosotrosPage() {
           </li>
         </ul>
         <a
-          href={linkWhatsapp()}
+          href={linkWhatsapp(numeroVentas)}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-6 text-base font-semibold text-white transition-opacity hover:opacity-90 sm:inline-flex sm:w-auto"

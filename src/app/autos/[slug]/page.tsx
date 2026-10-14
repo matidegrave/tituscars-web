@@ -21,6 +21,7 @@ import { CalendarDays, Car, Fuel, Gauge, Settings2 } from "lucide-react";
 import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
 import { linkWhatsapp, mensajeConsultaAuto } from "@/lib/whatsapp";
+import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
 
 export const revalidate = 60;
 
@@ -89,6 +90,8 @@ export default async function FichaAutoPage({
   const host = encabezados.get("x-forwarded-host") ?? encabezados.get("host") ?? "";
   const protocolo = encabezados.get("x-forwarded-proto") ?? "https";
   const urlFicha = `${protocolo}://${host}/autos/${auto.slug}`;
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
+  const numeroVentas = await numeroVentasServidor();
   const titulo = tituloAuto(auto);
   const precioFormateado = formatPrecio(auto.precio, auto.moneda);
   const baja = bajaDePrecio(auto);
@@ -205,6 +208,7 @@ export default async function FichaAutoPage({
                 texto: "Tengo un auto para entregar",
                 detalle: "permuta",
                 href: linkWhatsapp(
+                  numeroVentas,
                   `Hola, me interesa el ${titulo} ${auto.anio} y tengo un auto para entregar: ${urlFicha}`
                 ),
               },
@@ -212,16 +216,18 @@ export default async function FichaAutoPage({
                 texto: "Quiero financiarlo",
                 detalle: "financiar",
                 href: linkWhatsapp(
+                  numeroVentas,
                   `Hola, me interesa financiar el ${titulo} ${auto.anio} (${precioFormateado}). ¿Qué opciones tengo? ${urlFicha}`
                 ),
               },
               {
                 texto: "¡Me interesa!",
                 detalle: "interesa",
-                href: linkWhatsapp(`Hola, me interesa el ${titulo} ${auto.anio} (${precioFormateado}). ${urlFicha}`),
+                href: linkWhatsapp(numeroVentas, `Hola, me interesa el ${titulo} ${auto.anio} (${precioFormateado}). ${urlFicha}`),
               },
             ]}
             hrefWhatsapp={linkWhatsapp(
+              numeroVentas,
               mensajeConsultaAuto({
                 titulo,
                 anio: auto.anio,

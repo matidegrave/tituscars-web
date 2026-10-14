@@ -91,7 +91,7 @@ export function CotizacionForm({
     evento.preventDefault();
     if (!valido) return;
     track("lead_form", { categoria: "consignacion" });
-    const link = linkWhatsapp(mensajeConsigna(datos), WHATSAPP_CONSIGNAS);
+    const link = linkWhatsapp(WHATSAPP_CONSIGNAS, mensajeConsigna(datos));
     // En el navegador de TikTok/Instagram/Facebook lo resuelve WhatsappEnApps.
     if (!abrirWhatsappEnApp(link)) window.open(link, "_blank", "noopener,noreferrer");
     setEnviado(true);

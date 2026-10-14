@@ -42,6 +42,11 @@ export interface DatosEvento {
    * aviso_sin_stock | favoritos. favorito: agregar | quitar.
    */
   detalle?: string;
+  /**
+   * click_whatsapp: línea del número al que fue (tanda 51). En web_eventos va
+   * dentro de detalle, junto con el subtipo (lib/eventos-servidor.ts).
+   */
+  linea?: "pauta" | "portales";
   /** Página desde donde se hizo (busqueda desde el header, tanda 50); si no, la actual. */
   pagina?: string;
 }

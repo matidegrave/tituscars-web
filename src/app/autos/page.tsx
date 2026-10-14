@@ -33,6 +33,7 @@ import {
   sugerirCorreccion,
 } from "@/lib/busqueda";
 import { linkWhatsapp } from "@/lib/whatsapp";
+import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
 import { listaSugerencias } from "@/lib/sugerencias";
 import type { AutoCatalogo } from "@/lib/types";
 import { conColores } from "@/lib/color-foto";
@@ -77,6 +78,8 @@ export default async function CatalogoPage({
   const sp = await searchParams;
   // Scroll infinito: siempre arranca en la primera tanda (un ?page= viejo se ignora).
   const filtros = { ...parseFiltros(sp), page: 1 };
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
+  const numeroVentas = await numeroVentasServidor();
 
   // Palabras de la búsqueda que son filtros ("camioneta diesel", "hilux
   // automatica"): se aplican como filtros y se busca el resto como texto.
@@ -215,7 +218,7 @@ export default async function CatalogoPage({
                   buscado={filtros.q ?? ""}
                   sugerencia={sinResultados.sugerencia}
                   parecidos={sinResultados.parecidos}
-                  hrefAviso={linkWhatsapp(mensajeSimple(filtros.q ?? ""))}
+                  hrefAviso={linkWhatsapp(numeroVentas, mensajeSimple(filtros.q ?? ""))}
                   prellenado={prellenadoDesdeFiltros(filtros)}
                 />
               ) : autos.length > 0 ? (

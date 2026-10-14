@@ -13,10 +13,12 @@ import { ModoEquipo } from "@/components/modo-equipo";
 import { WhatsappEnApps } from "@/components/whatsapp-en-apps";
 import { TransicionFicha } from "@/components/catalogo/transicion-ficha";
 import { BarraSeleccion } from "@/components/vendedor/barra-seleccion";
+import { LineaWhatsapp } from "@/components/linea-whatsapp";
 import { COOKIE_EQUIPO, esValorEquipo } from "@/lib/equipo";
 import { SCRIPT_REPORTE_ERRORES } from "@/lib/reporte-errores-script";
 import { PIXEL_ID, SNIPPET_PIXEL } from "@/lib/tracking";
 import { SITE_URL } from "@/lib/config";
+import { numeroVentasServidor } from "@/lib/whatsapp-servidor";
 
 // Una sola fuente (Geist, la de todo el texto), con swap y preload. Geist Mono
 // se sacó: no la usaba ningún elemento y se precargaba igual en cada página.
@@ -63,6 +65,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // vuelve a chequear en el navegador (cookie o respaldo en localStorage).
   const equipo = esValorEquipo((await cookies()).get(COOKIE_EQUIPO)?.value);
   const pixelActivo = pixelDeProduccion && !equipo;
+  // WhatsApp de venta de esta visita: pauta o portales (tanda 51).
+  const numeroVentas = await numeroVentasServidor();
   return (
     <html
       lang="es"
@@ -76,22 +80,24 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {pixelActivo && <script dangerouslySetInnerHTML={{ __html: SNIPPET_PIXEL(PIXEL_ID) }} />}
       </head>
       <body className="flex min-h-full flex-col">
-        {/* /links (bio de Instagram/TikTok) va sola, sin el marco del sitio. */}
-        <OcultarEn rutas={RUTAS_SIN_MARCO}>
-          <SiteHeader />
-        </OcultarEn>
-        <main className="flex-1">{children}</main>
-        <OcultarEn rutas={RUTAS_SIN_MARCO}>
-          <ResenasBanner />
-          <SiteFooter />
-          <WhatsappFloatingButton />
-        </OcultarEn>
-        <VersionGuard />
-        <MetaPixel />
-        <WhatsappEnApps />
-        <TransicionFicha />
-        <ModoEquipo />
-        <BarraSeleccion />
+        <LineaWhatsapp numero={numeroVentas}>
+          {/* /links (bio de Instagram/TikTok) va sola, sin el marco del sitio. */}
+          <OcultarEn rutas={RUTAS_SIN_MARCO}>
+            <SiteHeader />
+          </OcultarEn>
+          <main className="flex-1">{children}</main>
+          <OcultarEn rutas={RUTAS_SIN_MARCO}>
+            <ResenasBanner />
+            <SiteFooter />
+            <WhatsappFloatingButton />
+          </OcultarEn>
+          <VersionGuard />
+          <MetaPixel />
+          <WhatsappEnApps />
+          <TransicionFicha />
+          <ModoEquipo />
+          <BarraSeleccion />
+        </LineaWhatsapp>
         {pixelActivo && (
           <noscript>
             {/* eslint-disable-next-line @next/next/no-img-element */}

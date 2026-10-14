@@ -40,6 +40,21 @@ const DETALLES = new Set([
   "quitar",
 ]);
 
+const LINEAS = new Set(["pauta", "portales"]);
+
+/**
+ * web_eventos.detalle (texto, máx 60). En general, el subtipo solo
+ * ("consulta"). En click_whatsapp con línea (tanda 51), un JSON con los dos:
+ * {"subtipo":"consulta","linea":"pauta"} — o {"linea":"pauta"} sin subtipo.
+ * Las filas anteriores a la tanda 51 quedan con el subtipo en texto plano.
+ */
+function detalleDe(tipo: TipoEvento, c: Cuerpo): string | null {
+  const subtipo = DETALLES.has(String(c.detalle)) ? String(c.detalle) : null;
+  const linea = tipo === "click_whatsapp" && LINEAS.has(String(c.linea)) ? String(c.linea) : null;
+  if (!linea) return subtipo;
+  return JSON.stringify(subtipo ? { subtipo, linea } : { linea });
+}
+
 function leerCookie(header: string | null, nombre: string): string | undefined {
   const m = header?.match(new RegExp(`(?:^|;\\s*)${nombre}=([^;]+)`));
   return m ? decodeURIComponent(m[1]) : undefined;
@@ -63,7 +78,7 @@ export async function guardarEvento(tipo: TipoEvento, c: Cuerpo, request: Reques
     dispositivo: texto(c.dispositivo, 20),
     resultados: entero(c.resultados, 0, 5000),
     posicion: entero(c.posicion, 1, 5000),
-    detalle: DETALLES.has(String(c.detalle)) ? String(c.detalle) : null,
+    detalle: detalleDe(tipo, c),
   };
   if (!debeRegistrar(request)) return simular("web_eventos", fila, request);
   const { error } = await supabaseServidor.from("web_eventos").insert(fila);

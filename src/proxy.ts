@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { COOKIE_EQUIPO, UN_ANIO_S, valorEquipo } from "@/lib/equipo";
+import { COOKIE_ORIGEN, SIETE_DIAS_S, VALOR_PAUTA, esLlegadaDePauta } from "@/lib/origen";
 
 /**
  * Router de la web antes de renderizar. En orden:
  *
+ * 0. Llegada por un anuncio (utm_medium=paid): cookie tc_origen=pauta por 7
+ *    días, en la respuesta y ya en ESTE request (ver marcarPauta).
  * 1. Host: en producción, los *.vercel.app redirigen a tituscars.com (mismo
  *    path y query) para no competir con el dominio en Google. Los previews de
  *    ramas (VERCEL_ENV=preview) no se tocan.
@@ -255,9 +258,40 @@ function bloquearCrawler(request: NextRequest): Response | null {
   return null;
 }
 
+// ─── Origen de la visita (tanda 51) ──────────────────────────────────────────
+//
+// Llegada por un anuncio (utm_medium=paid, lib/origen.ts): cookie
+// tc_origen=pauta por 7 días. Se pone en la respuesta (sea cual sea: también
+// en los 308) y además en el request que sigue a la página, porque la página
+// de llegada se renderiza con las cookies del request: sin esto, el primer
+// HTML saldría con el WhatsApp de portales. Una visita sin utm_medium=paid no
+// la toca (ni la renueva ni la borra).
+
+function marcarPauta(request: NextRequest): boolean {
+  if (!esLlegadaDePauta(request.nextUrl.searchParams)) return false;
+  request.cookies.set(COOKIE_ORIGEN, VALOR_PAUTA);
+  return true;
+}
+
 // ─── Proxy ─────────────────────────────────────────────────────────────────────
 
 export async function proxy(request: NextRequest) {
+  const pauta = marcarPauta(request);
+  const respuesta = await rutear(request);
+  if (pauta && respuesta instanceof NextResponse) {
+    respuesta.cookies.set(COOKIE_ORIGEN, VALOR_PAUTA, {
+      maxAge: SIETE_DIAS_S,
+      path: "/",
+      sameSite: "lax",
+      secure: true,
+      // Sólo la lee el servidor (layout y páginas arman los links).
+      httpOnly: true,
+    });
+  }
+  return respuesta;
+}
+
+async function rutear(request: NextRequest): Promise<Response> {
   // 0. Los crawlers, afuera antes que nada (tandas 46 y 46b).
   const bloqueo = bloquearCrawler(request);
   if (bloqueo) return bloqueo;
@@ -324,7 +358,8 @@ export async function proxy(request: NextRequest) {
   const ficha = pathname.match(/^\/autos\/([^/]+)$/);
   if (ficha) return resolverFicha(request, decodeURIComponent(ficha[1]));
 
-  return NextResponse.next();
+  // Con las cookies del request (puede traer la de pauta recién puesta).
+  return NextResponse.next({ request: { headers: request.headers } });
 }
 
 export const config = {

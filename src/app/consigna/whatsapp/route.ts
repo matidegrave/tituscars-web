@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.redirect(linkWhatsapp(mensaje, WHATSAPP_CONSIGNAS), 303);
+  return Response.redirect(linkWhatsapp(WHATSAPP_CONSIGNAS, mensaje), 303);
 }
 
 /** Un GET (recargar, link compartido) vuelve a la página del formulario. */

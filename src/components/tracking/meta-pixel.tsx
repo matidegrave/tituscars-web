@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { cargarPixel, pageView, track, type DatosEvento } from "@/lib/tracking";
+import { lineaDeNumero } from "@/lib/whatsapp";
+import { datosWhatsapp } from "@/lib/whatsapp-apps";
 
 /** Datos que llevan los links de WhatsApp (data-track-*): auto y subtipo (detalle). */
 function datosDelLink(link: HTMLAnchorElement): DatosEvento {
@@ -50,7 +52,9 @@ export function MetaPixel() {
         // click que ya se contó: no se mide dos veces.
         if (link.hasAttribute("data-whatsapp-directo")) return;
         if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//i.test(href)) {
-          track("click_whatsapp", datosDelLink(link));
+          // Pauta o portales según el número del link (tanda 51); consignas, sin línea.
+          const linea = lineaDeNumero(datosWhatsapp(href)?.numero ?? "") ?? undefined;
+          track("click_whatsapp", { ...datosDelLink(link), linea });
         } else if (href.startsWith("tel:")) {
           track("click_llamar", datosDelLink(link));
         }
