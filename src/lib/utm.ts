@@ -48,3 +48,30 @@ export function guardarUtmDeLaUrl() {
     // sessionStorage bloqueado: sin utm, el resto de la web funciona igual
   }
 }
+
+const LARGO_MARCA = 25;
+
+/** " (ref: X)" con el utm_content guardado (cortado a 25). "" si no hay. */
+export function marcaAnuncio(): string {
+  const contenido = leerUtm().utm_content?.slice(0, LARGO_MARCA).trim();
+  return contenido ? `(ref: ${contenido})` : "";
+}
+
+/**
+ * El link de wa.me con la marca del anuncio al final del texto prellenado.
+ * Devuelve el mismo href si no hay utm guardado, si no es wa.me o si ya la tiene.
+ */
+export function hrefConMarca(href: string): string {
+  const marca = marcaAnuncio();
+  if (!marca) return href;
+  try {
+    const url = new URL(href);
+    if (url.hostname !== "wa.me") return href;
+    const texto = url.searchParams.get("text") ?? "";
+    if (texto.endsWith(marca)) return href;
+    url.searchParams.set("text", texto ? `${texto} ${marca}` : marca);
+    return url.toString();
+  } catch {
+    return href;
+  }
+}
