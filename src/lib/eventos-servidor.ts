@@ -2,7 +2,7 @@ import { debeRegistrar, simular } from "@/lib/entorno";
 import { supabaseServidor } from "@/lib/supabase-servidor";
 import { EVENTO_META, type TipoEvento } from "@/lib/tracking";
 import { COOKIE_ANUNCIO, limpiarUtm } from "@/lib/origen";
-import { refAnuncio } from "@/lib/whatsapp";
+import { refAnuncioServidor } from "@/lib/anuncios-ref";
 
 // Registro de un evento en el servidor: fila en web_eventos y, si hay
 // META_CAPI_TOKEN, el mismo evento por la Conversions API de Meta con el
@@ -53,17 +53,18 @@ const DETALLE_MAXIMO = 200;
  *   linea    — "pauta" | "portales" (tanda 51, lo manda el navegador);
  *   anuncio  — utm_content completo de la última llegada paga (tanda 52, de la
  *              cookie tc_anuncio: lo lee el servidor, el Pixel no se toca);
- *   ref      — su código corto ("W1", o "A750443" si es ID numérico de Meta), el mismo del mensaje de WhatsApp.
+ *   ref      — su código corto ("W1"), el mismo del mensaje de WhatsApp (con
+ *              ID numérico de Meta: el código de anuncios_ref, si no "A750443").
  * Ej.: {"subtipo":"consulta","linea":"pauta","anuncio":"W1 Generico Seg","ref":"W1"}.
  * Si pasara de 200 se recorta el anuncio (el ref queda entero).
  * Las filas anteriores a la tanda 51 quedan con el subtipo en texto plano.
  */
-function detalleDe(tipo: TipoEvento, c: Cuerpo, request: Request): string | null {
+async function detalleDe(tipo: TipoEvento, c: Cuerpo, request: Request): Promise<string | null> {
   const subtipo = DETALLES.has(String(c.detalle)) ? String(c.detalle) : null;
   if (tipo !== "click_whatsapp") return subtipo;
   const linea = LINEAS.has(String(c.linea)) ? String(c.linea) : undefined;
   let anuncio = limpiarUtm(leerCookie(request.headers.get("cookie"), COOKIE_ANUNCIO)) || undefined;
-  const ref = refAnuncio(anuncio) ?? undefined;
+  const ref = (await refAnuncioServidor(anuncio)) ?? undefined;
   if (!linea && !anuncio) return subtipo;
   const armar = () => JSON.stringify({ subtipo: subtipo ?? undefined, linea, anuncio, ref });
   let detalle = armar();
@@ -103,7 +104,7 @@ export async function guardarEvento(tipo: TipoEvento, c: Cuerpo, request: Reques
     dispositivo: texto(c.dispositivo, 20),
     resultados: entero(c.resultados, 0, 5000),
     posicion: entero(c.posicion, 1, 5000),
-    detalle: detalleDe(tipo, c, request),
+    detalle: await detalleDe(tipo, c, request),
   };
   if (!debeRegistrar(request)) return simular("web_eventos", fila, request);
   const { error } = await supabaseServidor.from("web_eventos").insert(fila);

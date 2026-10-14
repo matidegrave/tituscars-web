@@ -5,14 +5,28 @@ import { esPauta } from "@/lib/origen";
  * Código corto del anuncio para el mensaje (tanda 52): si utm_content empieza
  * con letra(s)+número ("W1 Generico Seg" -> "W1", "C12 …" -> "C12"), sólo eso;
  * si no, utm_content cortado a 25. null sin anuncio.
- * Tanda 52b: Meta manda el ID numérico del anuncio (120251049306750443) ->
- * "A" + últimos 6 dígitos ("A750443").
+ * Si Meta manda el ID numérico del anuncio (120251049306750443): su código en
+ * anuncios_ref ("W1", tanda 53; la tabla la pasa refAnuncioServidor en
+ * lib/anuncios-ref.ts) o, si no está, "A" + últimos 6 dígitos ("A750443").
  */
-export function refAnuncio(utmContent: string | null | undefined): string | null {
+export function refAnuncio(
+  utmContent: string | null | undefined,
+  codigos?: CodigosAnuncio
+): string | null {
   const contenido = (utmContent ?? "").trim();
   if (!contenido) return null;
-  if (/^\d{9,}$/.test(contenido)) return `A${contenido.slice(-6)}`;
-  return contenido.match(/^[A-Z]{1,2}\d{1,3}\b/)?.[0] ?? contenido.slice(0, 25).trim();
+  const codigo = contenido.match(/^[A-Z]{1,2}\d{1,3}\b/)?.[0];
+  if (codigo) return codigo;
+  if (esIdAnuncio(contenido)) return codigos?.[contenido] ?? `A${contenido.slice(-6)}`;
+  return contenido.slice(0, 25).trim();
+}
+
+/** ad_id de Meta -> código corto ("W1"), de public.anuncios_ref. */
+export type CodigosAnuncio = Record<string, string>;
+
+/** utm_content es un ID numérico de anuncio de Meta (sólo dígitos, más de 8). */
+export function esIdAnuncio(utmContent: string | null | undefined): boolean {
+  return /^\d{9,}$/.test((utmContent ?? "").trim());
 }
 
 /**
