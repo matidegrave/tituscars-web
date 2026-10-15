@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     "La historia de Titus Cars: desde el primer auto que compramos hasta nuestro local en Av. Duarte Quirós 3996, Córdoba. Autos usados peritados y consigna virtual.",
 };
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 /** 1 video: solo. 2 o más: fila horizontal con scroll-snap (sin librerías). */
 function Videos({ videos, fecha }: { videos: VideoInstagram[]; fecha?: string }) {

@@ -36,9 +36,10 @@ import type { AutoCatalogo } from "@/lib/types";
 // usadas córdoba", "autos usados hasta 15 millones córdoba". Ver lib/usados.ts.
 // Con menos de 2 autos: noindex, parecidos y aviso (nunca 404).
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
-// ISR: cada página se genera en su primera visita y queda en caché 5 min.
+// ISR: cada página se genera en su primera visita y queda en caché hasta el
+// próximo aviso de gestión (tag "stock") o 1 h de respaldo.
 export function generateStaticParams(): { slug: string }[] {
   return [];
 }

@@ -21,11 +21,12 @@ import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
 import { mensajeConsultaAuto } from "@/lib/whatsapp";
 
-// ISR: la ficha se arma una vez y se sirve del caché de Vercel, regenerándose
-// cada 5 min (precio, estado, fotos). Las de los autos publicados se generan en
+// ISR: la ficha se arma una vez y se sirve del caché de Vercel. Cuando cambia
+// un auto (precio, estado, fotos…) gestión avisa a /api/revalidate y se
+// regenera en la siguiente visita; 1 h de respaldo. Las de los autos publicados se generan en
 // el build; un auto nuevo se genera en su primera visita (dynamicParams). Un
 // slug que ya no existe no llega acá: lo resuelve el proxy (308 o 404).
-export const revalidate = 300;
+export const revalidate = 3600;
 export const dynamicParams = true;
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {

@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
-import { supabase } from "@/lib/supabase";
+import { REVALIDAR_STOCK_S, TAG_STOCK, supabaseStock as supabase } from "@/lib/supabase";
 import type { AutoCatalogo } from "@/lib/types";
 import { POR_PAGINA, type Filtros } from "@/lib/filtros";
 import { filtroBusqueda } from "@/lib/busqueda";
@@ -360,8 +360,9 @@ export interface AutoResumen {
   actualizado_en: string;
 }
 
-// Cacheado 5 min, como el resto de las páginas (ISR de 300 s): el footer lo
-// usa en todas, así que con menos les bajaría la revalidación a todas.
+// Cacheado con el tag "stock" (lo vence el aviso de gestión, /api/revalidate)
+// y 1 h de respaldo, como las páginas: el footer lo usa en todas, así que con
+// menos les bajaría la revalidación a todas.
 export const getResumenStock = unstable_cache(
   async (): Promise<AutoResumen[]> => {
     const { data } = await supabase
@@ -371,5 +372,5 @@ export const getResumenStock = unstable_cache(
     return (data ?? []) as AutoResumen[];
   },
   ["resumen-stock-v1"],
-  { revalidate: 300 }
+  { tags: [TAG_STOCK], revalidate: REVALIDAR_STOCK_S }
 );

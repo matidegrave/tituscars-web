@@ -9,7 +9,7 @@ import { PaginaCatalogo } from "@/app/autos/pagina-catalogo";
 // con /autos estática, al navegar a /autos?q=focus o cambiar el orden asume que
 // la página no depende de la query, reusa la que tiene y los resultados no
 // cambian hasta recargar. Las consultas igual salen del caché de datos.
-// Test: e2e/catalogo-navegacion.mjs.
+// Test: scripts/e2e-catalogo.mjs (npm run test:e2e).
 
 // Siempre /autos, sin query: filtros, búsqueda y orden son la misma página
 // para Google.

@@ -5,8 +5,9 @@ import { FichaNoDisponible } from "@/components/ficha/no-disponible";
 // que ya no existe. NO es una URL pública: src/proxy.ts reescribe
 // /autos/<slug viejo> acá con status 404 (el navegador sigue viendo
 // /autos/<slug>); entrar directo redirige a /autos (paso 5 del proxy).
-// ISR: se genera en la primera visita y queda en caché 5 min.
-export const revalidate = 300;
+// ISR: se genera en la primera visita y queda en caché hasta el próximo aviso
+// de gestión (tag "stock") o 1 h de respaldo.
+export const revalidate = 3600;
 
 export function generateStaticParams(): { slug: string }[] {
   return [];
