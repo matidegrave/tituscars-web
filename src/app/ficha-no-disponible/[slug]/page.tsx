@@ -5,8 +5,10 @@ import { FichaNoDisponible } from "@/components/ficha/no-disponible";
 // que ya no existe. NO es una URL pública: src/proxy.ts reescribe
 // /autos/<slug viejo> acá con status 404 (el navegador sigue viendo
 // /autos/<slug>); entrar directo redirige a /autos (paso 5 del proxy).
-// ISR: se genera en la primera visita y queda en caché 5 min.
-export const revalidate = 300;
+// ISR: se genera en la primera visita y queda en caché hasta el próximo aviso
+// de gestión (tag "stock") o 10 min de respaldo.
+// = REVALIDAR_STOCK_S (lib/supabase.ts): subir a 3600 cuando gestión confirme revalidate en alta/baja/vendido/precio/fotos/reservado
+export const revalidate = 600;
 
 export function generateStaticParams(): { slug: string }[] {
   return [];

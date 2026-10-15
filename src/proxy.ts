@@ -126,6 +126,12 @@ type AutoSlug = { id: string; slug: string };
 // Lista de slugs vigentes en memoria por 60 s, para no sumar una consulta en
 // cada visita. Si un slug no está, se vuelve a consultar antes de decidir (un
 // auto recién publicado no puede dar 404).
+// El aviso de gestión (/api/revalidate, tag "stock") NO limpia esta lista: vive
+// en la memoria de cada instancia del proxy y revalidateTag no llega acá. No
+// hace falta para un auto nuevo ni para un slug cambiado (un slug que no está
+// fuerza la consulta; el viejo lo redirige la ficha). Un auto que se baja
+// puede seguir en la lista hasta 60 s: en ese rato la ficha, ya regenerada por
+// el aviso, da el "ya no está disponible" de autos/[slug]/not-found.tsx.
 let cache: { autos: AutoSlug[]; hasta: number } | null = null;
 
 async function slugsVigentes(forzar: boolean): Promise<AutoSlug[] | null> {
