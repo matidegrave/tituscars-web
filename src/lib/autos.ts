@@ -360,7 +360,8 @@ export interface AutoResumen {
   actualizado_en: string;
 }
 
-// Cacheado 60 s (como el resto de las páginas): el footer lo usa en todas.
+// Cacheado 5 min, como el resto de las páginas (ISR de 300 s): el footer lo
+// usa en todas, así que con menos les bajaría la revalidación a todas.
 export const getResumenStock = unstable_cache(
   async (): Promise<AutoResumen[]> => {
     const { data } = await supabase
@@ -370,5 +371,5 @@ export const getResumenStock = unstable_cache(
     return (data ?? []) as AutoResumen[];
   },
   ["resumen-stock-v1"],
-  { revalidate: 60 }
+  { revalidate: 300 }
 );

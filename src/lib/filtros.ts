@@ -168,3 +168,45 @@ export function contarFiltrosActivos(f: Filtros): number {
 export function toggleEnArray(lista: string[], valor: string): string[] {
   return lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor];
 }
+
+// ─── Caché por combinación de filtros ────────────────────────────────────────
+//
+// /autos?<filtros> no se renderiza en cada visita: el proxy (src/proxy.ts) la
+// reescribe a /catalogo/<clave>, una página ISR por combinación. La clave es la
+// query CANÓNICA de los filtros (filtrosAParams: sin utm_*, fbclid ni ?page=,
+// en orden fijo) en base64url, así cada combinación tiene una sola entrada en
+// el caché aunque llegue con otra query alrededor.
+
+/** Query canónica de los filtros de esta URL ("" si no tiene filtros). */
+export function queryCanonica(params: URLSearchParams): string {
+  return filtrosAParams({ ...parseFiltros(aSearchParams(params)), page: 1 }).toString();
+}
+
+export function codificarClave(query: string): string {
+  const bytes = new TextEncoder().encode(query);
+  let binario = "";
+  for (const b of bytes) binario += String.fromCharCode(b);
+  return btoa(binario).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** La query de una clave, o null si no es una clave válida. */
+export function decodificarClave(clave: string): string | null {
+  try {
+    const binario = atob(clave.replace(/-/g, "+").replace(/_/g, "/"));
+    const bytes = Uint8Array.from(binario, (c) => c.charCodeAt(0));
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+/** searchParams de una query, en la forma que reciben las páginas. */
+export function aSearchParams(query: string | URLSearchParams): SearchParamsCatalogo {
+  const params = new URLSearchParams(query);
+  const sp: SearchParamsCatalogo = {};
+  for (const clave of new Set(params.keys())) {
+    const valores = params.getAll(clave);
+    sp[clave] = valores.length > 1 ? valores : valores[0];
+  }
+  return sp;
+}

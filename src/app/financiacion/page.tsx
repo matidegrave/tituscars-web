@@ -3,8 +3,7 @@ import Image from "next/image";
 import { HeroOscuro } from "@/components/institucional/hero-oscuro";
 import { PasosNumerados } from "@/components/institucional/pasos-numerados";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
-import { linkVenta } from "@/lib/whatsapp";
-import { ventaServidor } from "@/lib/whatsapp-servidor";
+import { LinkVenta } from "@/components/linea-whatsapp";
 import { ENTIDADES, SITE_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -26,8 +25,6 @@ const REQUISITOS = [
 ];
 
 export default async function FinanciacionPage() {
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
-  const venta = await ventaServidor();
   return (
     <div>
       <HeroOscuro
@@ -82,15 +79,15 @@ export default async function FinanciacionPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Escribinos y te contamos qué opciones de financiación tenés disponibles.
           </p>
-          <a
-            href={linkVenta(venta, "Hola! Quiero consultar sobre financiación para un auto.")}
+          <LinkVenta
+            mensaje="Hola! Quiero consultar sobre financiación para un auto."
             target="_blank"
             rel="noopener noreferrer"
             className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 text-sm font-semibold text-white hover:opacity-90"
           >
             <WhatsappIcon className="h-4 w-4" />
             Consultar financiación
-          </a>
+          </LinkVenta>
         </div>
       </section>
     </div>

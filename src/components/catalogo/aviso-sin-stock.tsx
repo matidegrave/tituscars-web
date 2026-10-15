@@ -5,6 +5,8 @@ import { Dialog } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { FormBusqueda, type PropsBusqueda } from "@/components/busqueda-a-medida";
+import { useVenta } from "@/components/linea-whatsapp";
+import { linkVenta } from "@/lib/whatsapp";
 
 const sinSuscripcion = () => () => {};
 
@@ -18,7 +20,8 @@ const CLASE_BOTON =
  * directo a WhatsApp con el texto simple de siempre. Ya hidratado pasa a ser
  * un <button>: así abrir el form no cuenta como click a WhatsApp (lead).
  */
-export function AvisoSinStock({ hrefSimple, ...props }: PropsBusqueda & { hrefSimple: string }) {
+export function AvisoSinStock({ mensajeSimple, ...props }: PropsBusqueda & { mensajeSimple: string }) {
+  const venta = useVenta();
   // false en el servidor y al hidratar; true una vez hidratado.
   const hidratado = useSyncExternalStore(sinSuscripcion, () => true, () => false);
   const [abierto, setAbierto] = useState(false);
@@ -32,7 +35,7 @@ export function AvisoSinStock({ hrefSimple, ...props }: PropsBusqueda & { hrefSi
 
   if (!hidratado) {
     return (
-      <a href={hrefSimple} target="_blank" rel="noopener noreferrer" data-track-detalle="aviso_sin_stock" className={CLASE_BOTON}>
+      <a href={linkVenta(venta, mensajeSimple)} target="_blank" rel="noopener noreferrer" data-track-detalle="aviso_sin_stock" className={CLASE_BOTON}>
         {contenido}
       </a>
     );

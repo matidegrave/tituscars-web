@@ -14,15 +14,15 @@ export function SinResultados({
   buscado,
   sugerencia,
   parecidos,
-  hrefAviso,
+  mensajeAviso,
   prellenado,
   titulo,
 }: {
   buscado: string;
   sugerencia: { texto: string; href: string } | null;
   parecidos: AutoCatalogo[];
-  /** Sin JS: WhatsApp directo con el texto simple. */
-  hrefAviso: string;
+  /** Sin JS: WhatsApp directo con este texto simple. */
+  mensajeAviso: string;
   prellenado: Prellenado;
   /** En vez de "Hoy no tenemos {buscado}". */
   titulo?: string;
@@ -44,7 +44,7 @@ export function SinResultados({
         <p className="mt-1 text-sm text-muted-foreground">
           Entran autos todas las semanas. Escribinos y te avisamos cuando llegue uno.
         </p>
-        <AvisoSinStock hrefSimple={hrefAviso} prellenado={prellenado} origen="sin_resultados" />
+        <AvisoSinStock mensajeSimple={mensajeAviso} prellenado={prellenado} origen="sin_resultados" />
       </div>
       {parecidos.length > 0 && (
         <div>

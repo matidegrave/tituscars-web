@@ -24,8 +24,6 @@ import {
   textoPagina,
   tituloPagina,
 } from "@/lib/usados-textos";
-import { linkVenta } from "@/lib/whatsapp";
-import { ventaServidor } from "@/lib/whatsapp-servidor";
 import { CatalogoInfinito } from "@/components/catalogo/catalogo-infinito";
 import { SinResultados } from "@/components/catalogo/sin-resultados";
 import { prellenadoDesdeFiltros } from "@/lib/aviso-busqueda";
@@ -38,7 +36,12 @@ import type { AutoCatalogo } from "@/lib/types";
 // usadas córdoba", "autos usados hasta 15 millones córdoba". Ver lib/usados.ts.
 // Con menos de 2 autos: noindex, parecidos y aviso (nunca 404).
 
-export const revalidate = 60;
+export const revalidate = 300;
+
+// ISR: cada página se genera en su primera visita y queda en caché 5 min.
+export function generateStaticParams(): { slug: string }[] {
+  return [];
+}
 
 async function cargar(slug: string) {
   const resumen = await getResumenStock();
@@ -108,8 +111,6 @@ export default async function UsadosPage({
   const { slug } = await params;
   const { p, autosPagina } = await cargar(slug);
   const filtros = filtrosDe(p);
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
-  const venta = await ventaServidor();
   const resultado = await getAutosPaginados(filtros);
   const autos = await conColores(resultado.autos);
   const { total } = resultado;
@@ -178,10 +179,7 @@ export default async function UsadosPage({
                 }
                 sugerencia={null}
                 parecidos={similares}
-                hrefAviso={linkVenta(
-                  venta,
-                  `Hola, busco ${buscado}. Avisenme si les entra uno.`,
-                )}
+                mensajeAviso={`Hola, busco ${buscado}. Avisenme si les entra uno.`}
                 prellenado={prellenadoDesdeFiltros(filtros)}
               />
             </div>

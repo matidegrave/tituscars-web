@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useRutaVisible } from "@/lib/ruta-visible";
 import { WHATSAPP_CONSIGNAS, telefonoLegible } from "@/lib/config";
 import { esRutaConsigna, linkWhatsappSegunRuta } from "@/lib/whatsapp";
 import { useVenta } from "@/components/linea-whatsapp";
@@ -10,7 +10,7 @@ import { useVenta } from "@/components/linea-whatsapp";
  * resto, el de venta de esta visita (pauta o portales), link y número a la vez.
  */
 export function FooterWhatsapp({ className }: { className?: string }) {
-  const pathname = usePathname();
+  const pathname = useRutaVisible();
   const venta = useVenta();
   return (
     <a

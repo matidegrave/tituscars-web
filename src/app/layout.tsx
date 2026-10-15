@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
@@ -14,11 +13,9 @@ import { WhatsappEnApps } from "@/components/whatsapp-en-apps";
 import { TransicionFicha } from "@/components/catalogo/transicion-ficha";
 import { BarraSeleccion } from "@/components/vendedor/barra-seleccion";
 import { LineaWhatsapp } from "@/components/linea-whatsapp";
-import { COOKIE_EQUIPO, esValorEquipo } from "@/lib/equipo";
 import { SCRIPT_REPORTE_ERRORES } from "@/lib/reporte-errores-script";
 import { PIXEL_ID, SNIPPET_PIXEL } from "@/lib/tracking";
 import { SITE_URL } from "@/lib/config";
-import { ventaServidor } from "@/lib/whatsapp-servidor";
 
 // Una sola fuente (Geist, la de todo el texto), con swap y preload. Geist Mono
 // se sacó: no la usaba ningún elemento y se precargaba igual en cada página.
@@ -55,18 +52,17 @@ export const metadata: Metadata = {
 };
 
 // El Pixel va sólo en el deploy de producción (en local y en los previews, no);
-// además el snippet se autolimita al host tituscars.com.
+// además el snippet se autolimita al host tituscars.com y a los dispositivos
+// sin la marca de equipo (cookie tc_equipo o su respaldo en localStorage).
 const RUTAS_SIN_MARCO = ["/links"];
 
 const pixelDeProduccion = Boolean(PIXEL_ID) && process.env.VERCEL_ENV === "production";
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  // Con la marca de equipo (lib/equipo.ts) no va el Pixel. El snippet igual lo
-  // vuelve a chequear en el navegador (cookie o respaldo en localStorage).
-  const equipo = esValorEquipo((await cookies()).get(COOKIE_EQUIPO)?.value);
-  const pixelActivo = pixelDeProduccion && !equipo;
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
-  const venta = await ventaServidor();
+// El layout NO lee cookies ni headers: si lo hiciera, todas las páginas
+// serían dinámicas (se renderizarían en cada visita). El modo equipo lo
+// resuelve el snippet del Pixel y el WhatsApp de la visita, LineaWhatsapp, los
+// dos en el navegador.
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
@@ -77,10 +73,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_REPORTE_ERRORES }} />
         {/* Meta Pixel: la cola (fbq) existe antes de la hidratación; la librería
             se descarga recién después del load, sin competir con la foto. */}
-        {pixelActivo && <script dangerouslySetInnerHTML={{ __html: SNIPPET_PIXEL(PIXEL_ID) }} />}
+        {pixelDeProduccion && <script dangerouslySetInnerHTML={{ __html: SNIPPET_PIXEL(PIXEL_ID) }} />}
       </head>
       <body className="flex min-h-full flex-col">
-        <LineaWhatsapp venta={venta}>
+        <LineaWhatsapp>
           {/* /links (bio de Instagram/TikTok) va sola, sin el marco del sitio. */}
           <OcultarEn rutas={RUTAS_SIN_MARCO}>
             <SiteHeader />
@@ -98,7 +94,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <ModoEquipo />
           <BarraSeleccion />
         </LineaWhatsapp>
-        {pixelActivo && (
+        {pixelDeProduccion && (
+          // Sin JS no se puede ver la marca de equipo: el noscript va siempre.
           <noscript>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

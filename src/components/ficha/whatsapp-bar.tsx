@@ -11,6 +11,8 @@ import { BotonFavorito } from "@/components/favoritos/boton-favorito";
 import type { Favorito } from "@/lib/favoritos";
 import { CopiarFicha } from "@/components/vendedor/herramientas-card";
 import type { AutoParaCliente } from "@/lib/para-cliente";
+import { useVenta } from "@/components/linea-whatsapp";
+import { linkVenta } from "@/lib/whatsapp";
 
 /** true si copió el link (sin share nativo); false si usó el share o falló. */
 async function compartir(titulo: string): Promise<boolean> {
@@ -34,13 +36,15 @@ async function compartir(titulo: string): Promise<boolean> {
 }
 
 /**
- * Botones de WhatsApp de la ficha: son <a href> reales con el link ya armado
- * en el servidor, así funcionan aunque el JS del navegador no corra.
+ * Botones de WhatsApp de la ficha: son <a href> reales (el HTML sale con el
+ * número de portales, así funcionan aunque el JS no corra). El link se arma
+ * acá con el WhatsApp de la visita (useVenta: pauta o portales y ref del
+ * anuncio), que se resuelve en el navegador para que la ficha sea estática.
  */
 export function WhatsappCta({
   titulo,
   precioFormateado,
-  hrefWhatsapp,
+  mensajeWhatsapp,
   intenciones,
   trackAuto,
   favorito,
@@ -48,9 +52,10 @@ export function WhatsappCta({
 }: {
   titulo: string;
   precioFormateado: string;
-  hrefWhatsapp: string;
+  /** Mensaje de "Consultar por WhatsApp". */
+  mensajeWhatsapp: string;
   /** Consultas con intención (disponible / financiar / permuta), al WhatsApp de ventas. */
-  intenciones: { texto: string; href: string; detalle: string }[];
+  intenciones: { texto: string; mensaje: string; detalle: string }[];
   /** Datos del auto para el click_whatsapp / Lead (los lee MetaPixel del link). */
   trackAuto: { auto_id: string; slug: string; valor: number };
   /** Datos para guardarlo en favoritos (corazón al lado de compartir). */
@@ -61,6 +66,8 @@ export function WhatsappCta({
   // "Link copiado" en el mismo botón (antes era un toast: el Toaster sumaba
   // ~9 KB de JS a todas las páginas sólo para este aviso).
   const [copiado, setCopiado] = useState(false);
+  const venta = useVenta();
+  const hrefWhatsapp = linkVenta(venta, mensajeWhatsapp);
   useEffect(() => {
     if (!copiado) return;
     const t = setTimeout(() => setCopiado(false), 2000);
@@ -125,7 +132,7 @@ export function WhatsappCta({
         {intenciones.map((i) => (
           <a
             key={i.detalle}
-            href={i.href}
+            href={linkVenta(venta, i.mensaje)}
             {...datosTrack}
             data-track-detalle={i.detalle}
             target="_blank"

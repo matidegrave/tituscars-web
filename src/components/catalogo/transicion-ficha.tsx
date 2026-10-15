@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useRutaVisible } from "@/lib/ruta-visible";
 import { borrarRecorridoViejo, guardarEntrada } from "@/lib/recorrido";
 
 /** Precarga sólo con conexión rápida y sin ahorro de datos (Safari no informa: se asume rápida). */
@@ -33,7 +34,7 @@ const VIGENCIA_PRECARGA_MS = 5 * 60 * 1000;
  */
 export function TransicionFicha() {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = useRutaVisible();
   const [tocada, setTocada] = useState<{ foto?: string; titulo?: string } | null>(null);
   const timers = useRef<number[]>([]);
 

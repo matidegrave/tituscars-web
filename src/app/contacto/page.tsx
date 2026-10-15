@@ -2,15 +2,13 @@ import type { Metadata } from "next";
 import { MapPin, Clock } from "lucide-react";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { InstagramIcon } from "@/components/icons/social-icons";
-import { linkVenta } from "@/lib/whatsapp";
-import { ventaServidor } from "@/lib/whatsapp-servidor";
+import { LinkVenta, NumeroVenta } from "@/components/linea-whatsapp";
 import {
   HORARIOS,
   INSTAGRAM_URL,
   RESENAS_URL,
   DIRECCION,
   SITE_URL,
-  telefonoLegible,
   MAPS_COMO_LLEGAR,
 } from "@/lib/config";
 
@@ -25,8 +23,6 @@ const MAPS_EMBED_SRC = `https://www.google.com/maps?q=${encodeURIComponent(CONSU
 const MAPS_DIRECCIONES = MAPS_COMO_LLEGAR;
 
 export default async function ContactoPage() {
-  // WhatsApp de venta de esta visita: pauta o portales (tanda 51) y ref del anuncio (tanda 52).
-  const venta = await ventaServidor();
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <h1 className="text-3xl font-bold tracking-tight">Contacto</h1>
@@ -52,14 +48,13 @@ export default async function ContactoPage() {
             <WhatsappIcon className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
             <div>
               <p className="font-medium">WhatsApp</p>
-              <a
-                href={linkVenta(venta)}
+              <LinkVenta
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-muted-foreground underline underline-offset-2 hover:text-brand"
               >
-                {telefonoLegible(venta.numero)}
-              </a>
+                <NumeroVenta />
+              </LinkVenta>
             </div>
           </div>
 
@@ -72,15 +67,14 @@ export default async function ContactoPage() {
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <a
-              href={linkVenta(venta)}
+            <LinkVenta
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 text-sm font-semibold text-white hover:opacity-90"
             >
               <WhatsappIcon className="h-4 w-4" />
               WhatsApp
-            </a>
+            </LinkVenta>
             <a
               href={INSTAGRAM_URL}
               target="_blank"
