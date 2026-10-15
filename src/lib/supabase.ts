@@ -15,8 +15,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  */
 export const TAG_STOCK = "stock";
 
-/** Respaldo por si un aviso no llega: con el aviso no hace falta que sea corto. */
-export const REVALIDAR_STOCK_S = 3600;
+/**
+ * Respaldo por si un aviso no llega. Es 600 s (10 min) como red de seguridad
+ * mientras verificamos que gestión avisa en todos los casos. Las páginas ISR
+ * tienen el mismo valor en su `revalidate` (tiene que ser un literal).
+ */
+// subir a 3600 cuando gestión confirme revalidate en alta/baja/vendido/precio/fotos/reservado
+export const REVALIDAR_STOCK_S = 600;
 
 // Lecturas (GET/HEAD) al caché de datos de Next con el tag "stock"; lo demás
 // (rpc, escrituras) pasa directo.

@@ -19,7 +19,8 @@ import {
 } from "@/lib/autos";
 import { DIRECCION_AVENIDA, SITE_URL } from "@/lib/config";
 
-export const revalidate = 3600;
+// = REVALIDAR_STOCK_S (lib/supabase.ts): subir a 3600 cuando gestión confirme revalidate en alta/baja/vendido/precio/fotos/reservado
+export const revalidate = 600;
 
 // Título y descripción propios de la home (los que Google muestra al buscar
 // "titus cars"). La cantidad de autos sale del stock real: "+100" sólo si hay

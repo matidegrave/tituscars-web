@@ -361,7 +361,7 @@ export interface AutoResumen {
 }
 
 // Cacheado con el tag "stock" (lo vence el aviso de gestión, /api/revalidate)
-// y 1 h de respaldo, como las páginas: el footer lo usa en todas, así que con
+// y 10 min de respaldo, como las páginas: el footer lo usa en todas, así que con
 // menos les bajaría la revalidación a todas.
 export const getResumenStock = unstable_cache(
   async (): Promise<AutoResumen[]> => {
