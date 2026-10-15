@@ -1,7 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { useRutaVisible } from "@/lib/ruta-visible";
 import { cargarPixel, pageView, track, type DatosEvento } from "@/lib/tracking";
 import { lineaDeNumero } from "@/lib/whatsapp";
 import { datosWhatsapp } from "@/lib/whatsapp-apps";
@@ -27,7 +27,7 @@ function datosDelLink(link: HTMLAnchorElement): DatosEvento {
  *   que abre al instante; el evento sale por sendBeacon en el mismo click.
  */
 export function MetaPixel() {
-  const pathname = useRutaVisible();
+  const pathname = usePathname();
   const primeraCarga = useRef(true);
 
   useEffect(() => {

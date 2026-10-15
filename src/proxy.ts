@@ -9,7 +9,6 @@ import {
   esLlegadaDePauta,
   limpiarUtm,
 } from "@/lib/origen";
-import { codificarClave, queryCanonica } from "@/lib/filtros";
 
 /**
  * Router de la web antes de renderizar. En orden:
@@ -33,8 +32,6 @@ import { codificarClave, queryCanonica } from "@/lib/filtros";
  *    Tienda Nube que no está en la lista). Nunca 404.
  * 6. Si sólo cambió la barra o el prefijo: 308 a la ruta limpia.
  * 7. Fichas de auto (/autos/:slug), ver resolverFicha.
- * 8. Catálogo con filtros (/autos?marca=…): rewrite a /catalogo/<clave>, su
- *    página en caché (ver catalogoEnCache).
  */
 
 const DOMINIO = "https://tituscars.com";
@@ -417,33 +414,8 @@ async function rutear(request: NextRequest): Promise<Response> {
   const ficha = pathname.match(/^\/autos\/([^/]+)$/);
   if (ficha) return resolverFicha(request, decodeURIComponent(ficha[1]));
 
-  // 8. Catálogo con filtros
-  if (pathname === "/autos") {
-    const enCache = catalogoEnCache(request);
-    if (enCache) return enCache;
-  }
-
   // Con las cookies del request (puede traer la de pauta recién puesta).
   return NextResponse.next({ request: { headers: request.headers } });
-}
-
-// ─── Catálogo con filtros en caché ───────────────────────────────────────────
-//
-// /autos lee los filtros de la query: si la página los leyera de searchParams
-// sería dinámica y se renderizaría en CADA visita (era el grueso del consumo
-// de Vercel). En cambio, /autos es estática (sin filtros) y cada combinación
-// de filtros se reescribe a /catalogo/<clave>, una página ISR por combinación:
-// la primera visita la genera y las siguientes salen del caché. El navegador
-// sigue viendo /autos?…. La clave es la query CANÓNICA (lib/filtros.ts): sin
-// utm_*, fbclid ni ?page=, así un anuncio no crea una entrada por click.
-// Una query sin filtros (sólo utm, fbclid…) sirve /autos tal cual.
-function catalogoEnCache(request: NextRequest): NextResponse | null {
-  if (request.nextUrl.search.length <= 1) return null;
-  const query = queryCanonica(request.nextUrl.searchParams);
-  if (!query) return null;
-  return NextResponse.rewrite(urlDestino(request, `/catalogo/${codificarClave(query)}`), {
-    request: { headers: request.headers },
-  });
 }
 
 export const config = {

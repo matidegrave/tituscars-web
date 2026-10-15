@@ -1,11 +1,11 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { bloquearScroll, desbloquearScroll } from "@/lib/scroll-lock";
-import { useRutaVisible } from "@/lib/ruta-visible";
 import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
 import { useVenta } from "@/components/linea-whatsapp";
 
@@ -25,7 +25,7 @@ export function MenuMovil({
   links: { href: string; label: string }[];
   onCerrar: () => void;
 }) {
-  const pathname = useRutaVisible();
+  const pathname = usePathname();
   const venta = useVenta();
   const porLink = useRef(false);
   const cerrar = useRef(onCerrar);

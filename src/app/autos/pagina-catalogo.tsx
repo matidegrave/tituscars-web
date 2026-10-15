@@ -44,8 +44,8 @@ import {
 } from "@/lib/filtros";
 
 /**
- * El catálogo con los filtros de `sp`. Lo usan /autos (sin filtros, estática)
- * y /catalogo/[filtros] (una combinación de filtros, ISR), ver src/proxy.ts.
+ * El catálogo con los filtros de `sp`, para /autos
+ * (página dinámica: lee los filtros de searchParams).
  */
 export async function PaginaCatalogo({ sp }: { sp: SearchParamsCatalogo }) {
   // Scroll infinito: siempre arranca en la primera tanda (un ?page= viejo se ignora).

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useRutaVisible } from "@/lib/ruta-visible";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { filtrosVacios, urlCatalogo } from "@/lib/filtros";
 import { paginaSinCampana } from "@/lib/tracking";
@@ -41,7 +40,7 @@ export function BuscadorHeader({
   className?: string;
 }) {
   const router = useRouter();
-  const pathname = useRutaVisible();
+  const pathname = usePathname();
   const detalles = useRef<HTMLDetailsElement>(null);
   const campo = useRef<HTMLInputElement>(null);
   const [abierto, setAbierto] = useState(false);

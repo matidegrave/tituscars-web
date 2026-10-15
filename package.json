@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:busqueda": "node --test scripts/probar-busqueda.mjs"
+    "test:busqueda": "node --test scripts/probar-busqueda.mjs",
+    "test:e2e": "node --test --test-concurrency=1 scripts/e2e-catalogo.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -31,6 +32,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "playwright-core": "1.63.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRutaVisible } from "@/lib/ruta-visible";
+import { usePathname } from "next/navigation";
 
 /**
  * No muestra su contenido en ciertas rutas (ej. /links, que va sin header,
@@ -8,7 +8,7 @@ import { useRutaVisible } from "@/lib/ruta-visible";
  * que sin JS tampoco aparece.
  */
 export function OcultarEn({ rutas, children }: { rutas: string[]; children: React.ReactNode }) {
-  const pathname = useRutaVisible();
+  const pathname = usePathname();
   if (rutas.includes(pathname)) return null;
   return <>{children}</>;
 }

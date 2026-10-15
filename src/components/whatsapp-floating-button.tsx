@@ -1,6 +1,6 @@
 "use client";
 
-import { useRutaVisible } from "@/lib/ruta-visible";
+import { usePathname } from "next/navigation";
 import { linkWhatsappSegunRuta } from "@/lib/whatsapp";
 import { useVenta } from "@/components/linea-whatsapp";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
@@ -8,7 +8,7 @@ import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 const RUTA_FICHA = /^\/autos\/[^/]+$/;
 
 export function WhatsappFloatingButton() {
-  const pathname = useRutaVisible();
+  const pathname = usePathname();
   const venta = useVenta();
 
   if (RUTA_FICHA.test(pathname)) {

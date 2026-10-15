@@ -1,7 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { useRutaVisible } from "@/lib/ruta-visible";
 import { X } from "lucide-react";
 import { COOKIE_EQUIPO, UN_ANIO_S, hayMarcaEquipo, valorEquipoCliente, vendedorCliente } from "@/lib/equipo";
 import { leerSeleccion, suscribirSeleccion } from "@/lib/para-cliente";
@@ -18,7 +18,7 @@ const ninguno = () => 0;
  * esconde: abajo está la barra de la selección.
  */
 export function ModoEquipo() {
-  const pathname = useRutaVisible();
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [vendedor, setVendedor] = useState<string | null>(null);
   const seleccionados = useSyncExternalStore(suscribirSeleccion, () => leerSeleccion().length, ninguno);
