@@ -12,17 +12,34 @@
 // Navegadores: WebKit con un iPhone y Chromium de compu. Si faltan:
 //   npx playwright-core install webkit chromium
 // /api/track se intercepta (no se registra nada).
+//
+// También cubre (regla 15-oct: proxy, /autos, caché/ISR/revalidate o links de
+// WhatsApp no van a main sin este test completo):
+//  - home, ficha, /autos y /usados/hasta-15-millones cargan y TODOS sus links de
+//    venta van al número que corresponde: pauta + "(ref: W1)" con las cookies
+//    de pauta, portales sin ref sin cookies o en modo equipo.
+//  - llegada por anuncio (?utm_medium=paid&utm_content=<ID de Meta>) sin
+//    cookies previas: el proxy las pone y el link sale con pauta + W1. Sólo en
+//    Chromium: las cookies del proxy son Secure y WebKit no las guarda por
+//    http://localhost (en WebKit lo cubren las cookies puestas a mano).
+//  - POST /api/revalidate: 401 sin secreto o con uno incorrecto; con el
+//    correcto 200 y la ficha (ISR) se regenera. Necesita REVALIDATE_SECRET igual
+//    en `next start` y en el test (uno de prueba, NUNCA el de producción); sin
+//    la variable ese caso se saltea y avisa.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { chromium, devices, webkit } from "playwright-core";
 
 const BASE = process.env.BASE ?? "http://localhost:3011";
+const PAUTA = "5493515303712";
+const PORTALES = process.env.NEXT_PUBLIC_WHATSAPP ?? "5493513283316";
+const ANUNCIO_W1 = "120251049306750443"; // public.anuncios_ref -> W1
 
 const ESCENARIOS = {
   "sin cookies": [],
   "pauta (tc_origen + tc_anuncio)": [
     { name: "tc_origen", value: "pauta" },
-    { name: "tc_anuncio", value: "120251049306750443" },
+    { name: "tc_anuncio", value: ANUNCIO_W1 },
     { name: "tc_pauta_js", value: "1" },
   ],
   "equipo (tc_equipo)": [{ name: "tc_equipo", value: "1" }],
@@ -82,13 +99,12 @@ for (const [nombreNav, nav] of Object.entries(NAVEGADORES)) {
         await page.goto(`${BASE}/contacto`);
         await page.waitForLoadState("networkidle");
         const lupa = page.locator('summary[aria-label="Buscar autos"]:visible').first();
-        if (await lupa.count()) {
-          await lupa.click();
-          const enHeader = page.locator('details[open] input[name="q"]').first();
-          await enHeader.fill("focus");
-          await enHeader.press("Enter");
-          await verificar("lupa del header 'focus'", "q=focus");
-        }
+        assert.ok(await lupa.count(), "no se ve la lupa del header en /contacto");
+        await lupa.click();
+        const enHeader = page.locator('details[open] input[name="q"]').first();
+        await enHeader.fill("focus");
+        await enHeader.press("Enter");
+        await verificar("lupa del header 'focus'", "q=focus");
 
         // 2. Orden: mayor precio
         await aCatalogo();
@@ -105,3 +121,117 @@ for (const [nombreNav, nav] of Object.entries(NAVEGADORES)) {
     });
   }
 }
+
+// Venta esperada por escenario: número y ref del mensaje.
+const VENTA = {
+  "sin cookies": { numero: PORTALES, ref: null },
+  "pauta (tc_origen + tc_anuncio)": { numero: PAUTA, ref: "W1" },
+  "equipo (tc_equipo)": { numero: PORTALES, ref: null },
+};
+
+/** Links de venta de la página ya hidratada: [{numero, texto}] (sin los de consignas). */
+async function linksVenta(page) {
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(800); // hidratación + /api/anuncios-ref
+  const hrefs = await page.$$eval('a[href*="wa.me/"]', (as) => as.map((a) => a.href));
+  return hrefs
+    .map((h) => {
+      const u = new URL(h);
+      return { numero: u.pathname.replace("/", ""), texto: u.searchParams.get("text") ?? "" };
+    })
+    .filter((l) => !/consignar/i.test(l.texto));
+}
+
+function verificarVenta(links, esperado, pagina) {
+  assert.ok(links.length > 0, `${pagina}: no hay links de WhatsApp de venta`);
+  for (const l of links) {
+    assert.equal(l.numero, esperado.numero, `${pagina}: link a ${l.numero} ("${l.texto.slice(0, 60)}")`);
+    if (esperado.ref) {
+      assert.ok(l.texto.endsWith(`(ref: ${esperado.ref})`), `${pagina}: sin "(ref: ${esperado.ref})": "${l.texto}"`);
+    } else {
+      assert.doesNotMatch(l.texto, /\(ref: /, `${pagina}: ref de más: "${l.texto}"`);
+    }
+  }
+}
+
+/** Una ficha publicada (la primera del catálogo). */
+async function unaFicha() {
+  const html = await (await fetch(`${BASE}/autos`)).text();
+  const slug = html.match(/href="(\/autos\/[^"?#]+)"/)?.[1];
+  assert.ok(slug, "no encontré ninguna ficha en /autos");
+  return slug;
+}
+
+const PAGINAS = ["/", "/autos", "/usados/hasta-15-millones"];
+
+for (const [nombreNav, nav] of Object.entries(NAVEGADORES)) {
+  for (const [nombre, cookies] of Object.entries(ESCENARIOS)) {
+    test(`páginas y WhatsApp de venta — ${nombreNav}, ${nombre}`, async () => {
+      const ficha = await unaFicha();
+      const browser = await nav.tipo.launch();
+      try {
+        const ctx = await browser.newContext(nav.opciones);
+        await ctx.addCookies(cookies.map((c) => ({ ...c, url: BASE })));
+        await ctx.route("**/api/track", (r) => r.fulfill({ status: 204 }));
+        const page = await ctx.newPage();
+        for (const ruta of [...PAGINAS, ficha]) {
+          const res = await page.goto(`${BASE}${ruta}`);
+          assert.equal(res?.status(), 200, `${ruta}: status ${res?.status()}`);
+          if (ruta === ficha || ruta.startsWith("/usados")) {
+            assert.ok(await page.locator("h1").count(), `${ruta}: sin <h1>`);
+          }
+          if (ruta.startsWith("/usados")) {
+            assert.ok(await page.locator('main a[href^="/autos/"]').count(), `${ruta}: sin autos listados`);
+          }
+          verificarVenta(await linksVenta(page), VENTA[nombre], ruta);
+        }
+      } finally {
+        await browser.close();
+      }
+    });
+  }
+}
+
+test("llegada por anuncio (utm_medium=paid + ID de Meta) — compu (Chromium)", async () => {
+  const ficha = await unaFicha();
+  const browser = await chromium.launch();
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+    await ctx.route("**/api/track", (r) => r.fulfill({ status: 204 }));
+    const page = await ctx.newPage();
+    // Entra por la ficha (lo típico de un anuncio) y después recorre el sitio.
+    await page.goto(`${BASE}${ficha}?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO_W1}`);
+    verificarVenta(await linksVenta(page), { numero: PAUTA, ref: "W1" }, `${ficha} (llegada)`);
+    for (const ruta of PAGINAS) {
+      await page.goto(`${BASE}${ruta}`);
+      verificarVenta(await linksVenta(page), { numero: PAUTA, ref: "W1" }, `${ruta} (después de la llegada)`);
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
+test("POST /api/revalidate: secreto y regeneración de la ficha", async (t) => {
+  const post = (headers = {}) =>
+    fetch(`${BASE}/api/revalidate`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify({ dominio: "E2E", motivo: "test e2e" }),
+    });
+  assert.equal((await post()).status, 401, "sin header tiene que dar 401");
+  assert.equal((await post({ "x-revalidate-secret": "incorrecto" })).status, 401, "secreto incorrecto: 401");
+  assert.equal((await fetch(`${BASE}/api/revalidate`)).status, 405, "GET: 405");
+
+  const secreto = process.env.REVALIDATE_SECRET;
+  if (!secreto) {
+    t.skip("sin REVALIDATE_SECRET: no se prueba el 200 ni la regeneración");
+    return;
+  }
+  const ficha = await unaFicha();
+  const cache = async () => (await fetch(`${BASE}${ficha}`)).headers.get("x-nextjs-cache");
+  await cache();
+  assert.equal(await cache(), "HIT", `${ficha}: la ficha no sale del caché (ISR)`);
+  assert.equal((await post({ "x-revalidate-secret": secreto })).status, 200, "secreto correcto: 200");
+  assert.notEqual(await cache(), "HIT", `${ficha}: después del aviso sigue el HTML viejo`);
+  assert.equal(await cache(), "HIT", `${ficha}: no volvió al caché después de regenerarse`);
+});
