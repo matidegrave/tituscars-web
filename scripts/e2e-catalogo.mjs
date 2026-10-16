@@ -132,7 +132,14 @@ const VENTA = {
 /** Links de venta de la página ya hidratada: [{numero, texto}] (sin los de consignas). */
 async function linksVenta(page) {
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(800); // hidratación + /api/anuncios-ref
+  // El número de pauta y la ref se ponen al hidratar (components/linea-whatsapp.tsx):
+  // esperar la hidratación de verdad, no un tiempo fijo. Con el servidor cargado
+  // WebKit a veces hidrata después de networkidle + 800 ms, y el test leía el
+  // HTML estático (portales) o el replaceState tardío del router le cortaba el
+  // goto siguiente ("interrupted by another navigation", 15 y 16-oct).
+  await page.waitForFunction(() => window.__TITUS_HIDRATO === true, null, { timeout: 15_000 });
+  await page.waitForLoadState("networkidle"); // /api/anuncios-ref (W1)
+  await page.waitForTimeout(300);
   const hrefs = await page.$$eval('a[href*="wa.me/"]', (as) => as.map((a) => a.href));
   return hrefs
     .map((h) => {
@@ -294,4 +301,53 @@ test("formulario 'Te lo buscamos': rechaza campos largos o desconocidos", async 
   assert.equal((await enviar({ datos: { inventado: "x" } })).status, 400, "clave desconocida en datos");
   assert.equal((await enviar({ origen: "otro" })).status, 400, "origen desconocido");
   assert.equal((await enviar("x".repeat(9000))).status, 400, "cuerpo > 8 KB");
+});
+
+// ─── Proxy (src/proxy.ts): bots, cookies de pauta y fichas que no existen ────
+
+test("proxy: bloqueo de bots (tanda 46)", async () => {
+  const ficha = await unaFicha();
+  const pedir = (ruta, ua, metodo = "GET") =>
+    fetch(`${BASE}${ruta}`, { method: metodo, redirect: "manual", headers: { "user-agent": ua } }).then((r) => r.status);
+  const META = "meta-externalads/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)";
+  const GOOGLE = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+  const PERSONA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148";
+  assert.equal(await pedir("/autos?q=focus", META), 403, "bot en /autos con filtros: 403");
+  assert.equal(await pedir("/api/track", META, "POST"), 403, "bot en /api/track: 403");
+  assert.equal(await pedir("/autos", META), 200, "bot en /autos sin query: abierto");
+  assert.equal(await pedir("/autos?utm_source=fb&utm_medium=paid", META), 200, "URL de anuncio: abierta");
+  assert.equal(await pedir(ficha, META), 200, "bot en una ficha: abierta");
+  assert.equal(await pedir("/", META), 200, "bot en la home: abierta");
+  assert.equal(await pedir("/autos?q=focus", GOOGLE), 200, "Googlebot no se bloquea");
+  assert.equal(await pedir("/autos?q=focus", PERSONA), 200, "una persona no se bloquea");
+});
+
+test("proxy: cookies de pauta en la llegada por anuncio", async () => {
+  const r = await fetch(`${BASE}/?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO_W1}&utm_campaign=prueba`, {
+    redirect: "manual",
+  });
+  assert.equal(r.status, 200);
+  const cookies = r.headers.getSetCookie();
+  const de = (nombre) => cookies.find((c) => c.startsWith(`${nombre}=`)) ?? "";
+  assert.match(de("tc_origen"), /^tc_origen=pauta;/, "tc_origen=pauta");
+  assert.match(de("tc_anuncio"), new RegExp(`^tc_anuncio=${ANUNCIO_W1};`), "tc_anuncio = ID del anuncio");
+  assert.match(de("tc_campana"), /^tc_campana=prueba;/, "tc_campana");
+  for (const n of ["tc_origen", "tc_anuncio", "tc_campana"]) {
+    assert.doesNotMatch(de(n), /HttpOnly/i, `${n} tiene que ser legible desde JS`);
+    assert.match(de(n), /Secure/i, `${n} Secure`);
+    assert.match(de(n), /SameSite=lax/i, `${n} SameSite=Lax`);
+    assert.match(de(n), /Max-Age=604800/i, `${n} 7 días`);
+  }
+  // Sin utm_medium=paid no toca nada.
+  const sin = await fetch(`${BASE}/?utm_source=ig&fbclid=abc`, { redirect: "manual" });
+  assert.equal(sin.headers.getSetCookie().filter((c) => /^tc_(origen|anuncio|campana)=/.test(c)).length, 0);
+});
+
+test("proxy: ficha que no existe da 404 y /autos no se cachea", async () => {
+  const r = await fetch(`${BASE}/autos/no-existe-este-auto-2001-zzzzzz`, { redirect: "manual" });
+  assert.equal(r.status, 404, "ficha inexistente: 404");
+  // /autos es dinámica (lee la query): nunca sale del caché de páginas.
+  const a = await fetch(`${BASE}/autos?q=focus`);
+  assert.notEqual(a.headers.get("x-nextjs-cache"), "HIT", "/autos?q=… no puede salir del caché de páginas");
+  assert.match(a.headers.get("cache-control") ?? "", /no-store|private|max-age=0/, "/autos: sin caché compartida");
 });
