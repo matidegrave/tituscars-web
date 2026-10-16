@@ -235,3 +235,63 @@ test("POST /api/revalidate: secreto y regeneración de la ficha", async (t) => {
   assert.notEqual(await cache(), "HIT", `${ficha}: después del aviso sigue el HTML viejo`);
   assert.equal(await cache(), "HIT", `${ficha}: no volvió al caché después de regenerarse`);
 });
+
+// ─── Seguridad (16-oct) ─────────────────────────────────────────────────────
+
+test("headers de seguridad en páginas y API", async () => {
+  const ficha = await unaFicha();
+  for (const ruta of ["/", "/autos", ficha, "/usados/hasta-15-millones", "/api/version"]) {
+    const h = (await fetch(`${BASE}${ruta}`)).headers;
+    assert.equal(h.get("x-content-type-options"), "nosniff", `${ruta}: X-Content-Type-Options`);
+    assert.equal(h.get("referrer-policy"), "strict-origin-when-cross-origin", `${ruta}: Referrer-Policy`);
+    assert.equal(h.get("x-frame-options"), "DENY", `${ruta}: X-Frame-Options`);
+    assert.match(h.get("strict-transport-security") ?? "", /max-age=\d{7,}/, `${ruta}: HSTS`);
+    assert.match(h.get("content-security-policy-report-only") ?? "", /frame-ancestors 'none'/, `${ruta}: frame-ancestors`);
+  }
+});
+
+// Cada caso usa su propia IP (x-real-ip): en Vercel ese header lo pone la
+// plataforma; acá sirve para no mezclar la cuenta con los otros tests.
+const ipDePrueba = () => `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
+
+test("rate limit de /api/track: 30 por minuto por IP", async () => {
+  const ip = ipDePrueba();
+  const estados = [];
+  // Cuerpo con tipo inválido: el endpoint lo ignora (no registra ni simula nada).
+  for (let i = 0; i < 31; i++) {
+    const r = await fetch(`${BASE}/api/track`, { method: "POST", headers: { "x-real-ip": ip }, body: "{}" });
+    estados.push(r.status);
+  }
+  assert.deepEqual(estados.slice(0, 30), Array(30).fill(204), "los primeros 30 tienen que entrar");
+  assert.equal(estados[30], 429, "el 31 tiene que dar 429");
+});
+
+test("rate limit del formulario 'Te lo buscamos': 3 cada 10 min por IP", async () => {
+  const ip = ipDePrueba();
+  const estados = [];
+  // Honeypot lleno: el servidor responde ok sin guardar (ni simular) nada.
+  for (let i = 0; i < 4; i++) {
+    const r = await fetch(`${BASE}/api/busqueda-a-medida`, {
+      method: "POST",
+      headers: { "x-real-ip": ip, "content-type": "application/json" },
+      body: JSON.stringify({ web: "bot" }),
+    });
+    estados.push(r.status);
+  }
+  assert.deepEqual(estados, [200, 200, 200, 429]);
+  // El tope de 5 por hora no se prueba acá (haría falta esperar 10 min).
+});
+
+test("formulario 'Te lo buscamos': rechaza campos largos o desconocidos", async () => {
+  const enviar = (cuerpo) =>
+    fetch(`${BASE}/api/busqueda-a-medida`, {
+      method: "POST",
+      headers: { "x-real-ip": ipDePrueba(), "content-type": "application/json" },
+      body: JSON.stringify(cuerpo),
+    });
+  assert.equal((await enviar({ observaciones: "x".repeat(1001) })).status, 400, "observaciones > 1000");
+  assert.equal((await enviar({ modelos_buscados: "x".repeat(301) })).status, 400, "modelos_buscados > 300");
+  assert.equal((await enviar({ datos: { inventado: "x" } })).status, 400, "clave desconocida en datos");
+  assert.equal((await enviar({ origen: "otro" })).status, 400, "origen desconocido");
+  assert.equal((await enviar("x".repeat(9000))).status, 400, "cuerpo > 8 KB");
+});

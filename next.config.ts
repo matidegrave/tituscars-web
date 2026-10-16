@@ -23,14 +23,15 @@ const CSP = [
   "base-uri 'self'",
   // El formulario de /consigna sin JS postea acá y redirige a WhatsApp.
   "form-action 'self' https://wa.me https://api.whatsapp.com",
-  "frame-ancestors 'self'",
+  // Nadie embebe la web en un iframe (ni ella misma): igual que X-Frame-Options DENY.
+  "frame-ancestors 'none'",
   "report-uri /api/csp-report",
 ].join("; ");
 
 const HEADERS_SEGURIDAD = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   { key: "Content-Security-Policy-Report-Only", value: CSP },

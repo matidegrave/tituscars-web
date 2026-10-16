@@ -40,8 +40,8 @@ function esBot(request: Request): boolean {
 export async function POST(request: Request) {
   // Un bot no mide: 204 y listo, sin insert.
   if (esBot(request)) return new Response(null, { status: 204 });
-  // 60 eventos por minuto por IP; pasado eso, 429 sin tocar la base.
-  if (!dentroDelLimite(`track:${ipDe(request)}`, 60, 60 * 1000)) return demasiadas();
+  // 30 eventos por minuto por IP; pasado eso, 429 sin tocar la base.
+  if (!dentroDelLimite(`track:${ipDe(request)}`, 30, 60 * 1000)) return demasiadas();
   try {
     const cuerpo = await request.text();
     if (cuerpo.length > MAXIMO_BYTES) return new Response(null, { status: 204 });

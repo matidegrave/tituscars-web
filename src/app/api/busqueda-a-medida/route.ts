@@ -4,7 +4,7 @@ import { demasiadas, dentroDelLimite, ipDe } from "@/lib/rate-limit";
 
 // Formulario "Te lo buscamos": valida en el servidor y guarda en
 // busquedas_web (desde la tanda 49 sin nombre ni celular, con datos y
-// origen). Rate limit: 3 envíos cada 10 minutos por IP. Fuera de producción
+// origen). Rate limit por IP: 3 envíos cada 10 minutos y 5 por hora. Fuera de producción
 // real (lib/entorno.ts) no guarda: loguea y responde ok.
 
 const MAXIMO_BYTES = 8 * 1024;
@@ -63,7 +63,9 @@ function datosValidos(v: unknown): Record<string, string | number | null> | null
 }
 
 export async function POST(request: Request) {
-  if (!dentroDelLimite(`busqueda:${ipDe(request)}`, 3, 10 * 60 * 1000)) return demasiadas();
+  const ip = ipDe(request);
+  if (!dentroDelLimite(`busqueda:${ip}`, 3, 10 * 60 * 1000)) return demasiadas();
+  if (!dentroDelLimite(`busqueda-hora:${ip}`, 5, 60 * 60 * 1000)) return demasiadas();
 
   let c: Cuerpo;
   try {
