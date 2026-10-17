@@ -185,7 +185,7 @@ async function resolverFicha(request: NextRequest, slug: string): Promise<NextRe
 // (con extensión: robots.txt, sitemap.xml, /brand/logo.png, /reels/x.mp4…)
 // siempre pasan.
 const RUTAS_PROPIAS =
-  /^\/(?:$|autos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|favoritos$|usados\/[a-z0-9]+(?:-[a-z0-9]+)*$|ficha-no-disponible$|ml-callback$|api\/|_next\/|_vercel\/|\.well-known\/)/;
+  /^\/(?:$|autos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|favoritos$|informe\/[^/]+$|usados\/[a-z0-9]+(?:-[a-z0-9]+)*$|ficha-no-disponible$|ml-callback$|api\/|_next\/|_vercel\/|\.well-known\/)/;
 
 function esRutaPropia(pathname: string): boolean {
   return RUTAS_PROPIAS.test(pathname) || /\.[a-z0-9]+$/i.test(pathname);
@@ -338,6 +338,8 @@ function marcarPauta(request: NextRequest): Record<string, string> | null {
 // ─── Proxy ─────────────────────────────────────────────────────────────────────
 
 export async function proxy(request: NextRequest) {
+  // El informe al consignante no lleva cookies (ni de pauta ni la migración).
+  if (request.nextUrl.pathname.startsWith("/informe/")) return rutear(request);
   const marcas = marcarPauta(request);
   const respuesta = await rutear(request);
   if (respuesta instanceof NextResponse) {

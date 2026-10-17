@@ -26,6 +26,8 @@
 //    correcto 200 y la ficha (ISR) se regenera. Necesita REVALIDATE_SECRET igual
 //    en `next start` y en el test (uno de prueba, NUNCA el de producción); sin
 //    la variable ese caso se saltea y avisa.
+//  - /informe/[token] (informe al consignante): estados sin datos, noindex, OG
+//    genérico, sin caché ni cookies ni Pixel, y no embebible (DENY).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { chromium, devices, webkit } from "playwright-core";
@@ -350,4 +352,59 @@ test("proxy: ficha que no existe da 404 y /autos no se cachea", async () => {
   const a = await fetch(`${BASE}/autos?q=focus`);
   assert.notEqual(a.headers.get("x-nextjs-cache"), "HIT", "/autos?q=… no puede salir del caché de páginas");
   assert.match(a.headers.get("cache-control") ?? "", /no-store|private|max-age=0/, "/autos: sin caché compartida");
+});
+
+// ─── /informe/[token]: informe al consignante (Bloque 3 de gestión) ──────────
+// Sin informes enviados en la base de pruebas, se cubre lo que no depende de
+// los datos: estados sin datos, noindex, OG genérico, sin caché, sin cookies,
+// sin Pixel ni marco del sitio, y que sigue sin poder embeberse (DENY).
+
+test("informe: token inválido o inexistente, sin marco, sin caché ni cookies, no embebible", async () => {
+  const NO_ENCONTRADO = "No encontramos este informe.";
+  for (const ruta of ["/informe/no-es-un-token", `/informe/${"0".repeat(36)}`]) {
+    // Con utm de pauta: igual no tiene que poner ninguna cookie.
+    const r = await fetch(`${BASE}${ruta}?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO_W1}`, {
+      redirect: "manual",
+    });
+    assert.equal(r.status, 200, `${ruta}: status`);
+    const html = await r.text();
+    assert.ok(html.includes(NO_ENCONTRADO), `${ruta}: "no encontramos este informe"`);
+    assert.doesNotMatch(html, /token inv[aá]lido/i, `${ruta}: sin texto técnico`);
+    assert.match(html, /<meta name="robots" content="noindex, nofollow"/, `${ruta}: noindex`);
+    assert.match(html, /<meta property="og:title" content="Informe de publicación — Titus Cars"/, `${ruta}: OG genérico`);
+    assert.doesNotMatch(html, /fbevents|connect\.facebook|facebook\.com\/tr/, `${ruta}: sin Pixel`);
+    assert.doesNotMatch(html, /<header|<footer/, `${ruta}: sin el marco del sitio`);
+    assert.equal(r.headers.getSetCookie().length, 0, `${ruta}: sin cookies`);
+    const cc = r.headers.get("cache-control") ?? "";
+    assert.match(cc, /private/, `${ruta}: Cache-Control private`);
+    assert.match(cc, /no-store/, `${ruta}: Cache-Control no-store`);
+    assert.equal(r.headers.get("x-frame-options"), "DENY", `${ruta}: X-Frame-Options DENY`);
+    assert.match(r.headers.get("content-security-policy-report-only") ?? "", /frame-ancestors 'none'/, `${ruta}: frame-ancestors 'none'`);
+  }
+  // /informe sin token no es una ruta: al catálogo, como cualquier URL vieja.
+  assert.equal((await fetch(`${BASE}/informe/`, { redirect: "manual" })).status, 308);
+  const robots = await (await fetch(`${BASE}/robots.txt`)).text();
+  assert.match(robots, /Disallow: \/informe\//, "robots.txt: /informe/ fuera");
+});
+
+test("informe: en el iPhone no tiene scroll horizontal ni errores de consola", async () => {
+  const navegador = await webkit.launch();
+  try {
+    const pagina = await (await navegador.newContext(devices["iPhone 13"])).newPage();
+    const errores = [];
+    pagina.on("console", (m) => m.type() === "error" && errores.push(m.text()));
+    pagina.on("pageerror", (e) => errores.push(String(e)));
+    await pagina.goto(`${BASE}/informe/${"0".repeat(36)}`, { waitUntil: "networkidle" });
+    const m = await pagina.evaluate(() => ({
+      ancho: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      guardado: localStorage.length + sessionStorage.length,
+      cookies: document.cookie,
+    }));
+    assert.equal(m.ancho, 0, "sin scroll horizontal");
+    assert.equal(m.guardado, 0, "sin localStorage ni sessionStorage");
+    assert.equal(m.cookies, "", "sin cookies");
+    assert.deepEqual(errores, [], "sin errores en consola");
+  } finally {
+    await navegador.close();
+  }
 });

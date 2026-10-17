@@ -54,7 +54,11 @@ export const metadata: Metadata = {
 // El Pixel va sólo en el deploy de producción (en local y en los previews, no);
 // además el snippet se autolimita al host tituscars.com y a los dispositivos
 // sin la marca de equipo (cookie tc_equipo o su respaldo en localStorage).
-const RUTAS_SIN_MARCO = ["/links"];
+const RUTAS_SIN_MARCO = ["/links", "/informe/"];
+// /informe/* (el informe al consignante) va además sin nada del sitio: sin
+// Pixel, sin medición, sin localStorage/sessionStorage ni cookies. El snippet
+// del Pixel del <head> se saltea solo en esa ruta (lib/tracking.ts).
+const RUTAS_SIN_SITIO = ["/informe/"];
 
 const pixelDeProduccion = Boolean(PIXEL_ID) && process.env.VERCEL_ENV === "production";
 
@@ -87,25 +91,29 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <SiteFooter />
             <WhatsappFloatingButton />
           </OcultarEn>
-          <VersionGuard />
-          <MetaPixel />
-          <WhatsappEnApps />
-          <TransicionFicha />
-          <ModoEquipo />
-          <BarraSeleccion />
+          <OcultarEn rutas={RUTAS_SIN_SITIO}>
+            <VersionGuard />
+            <MetaPixel />
+            <WhatsappEnApps />
+            <TransicionFicha />
+            <ModoEquipo />
+            <BarraSeleccion />
+          </OcultarEn>
         </LineaWhatsapp>
         {pixelDeProduccion && (
           // Sin JS no se puede ver la marca de equipo: el noscript va siempre.
-          <noscript>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              height="1"
-              width="1"
-              style={{ display: "none" }}
-              alt=""
-              src={`https://www.facebook.com/tr?id=${PIXEL_ID}&ev=PageView&noscript=1`}
-            />
-          </noscript>
+          <OcultarEn rutas={RUTAS_SIN_SITIO}>
+            <noscript>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                height="1"
+                width="1"
+                style={{ display: "none" }}
+                alt=""
+                src={`https://www.facebook.com/tr?id=${PIXEL_ID}&ev=PageView&noscript=1`}
+              />
+            </noscript>
+          </OcultarEn>
         )}
       </body>
     </html>

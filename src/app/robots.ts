@@ -20,7 +20,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: "/autos?",
+      // /informe/: el informe al consignante; el token es su única protección.
+      disallow: ["/autos?", "/informe/"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

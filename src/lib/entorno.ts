@@ -11,27 +11,32 @@ import { hayMarcaEquipo } from "@/lib/equipo";
  */
 export const HOST_PRODUCCION = "tituscars.com";
 
-export function hostDe(request: Request): string {
+/** Una Request o lo que da headers() en una página (sin url). */
+type ConHeaders = { headers: { get(nombre: string): string | null }; url?: string };
+
+export function hostDe(request: ConHeaders): string {
   const host =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host;
+    request.headers.get("x-forwarded-host") ??
+    request.headers.get("host") ??
+    (request.url ? new URL(request.url).host : "");
   return host.split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
 }
 
-export function esProduccionReal(request: Request): boolean {
+export function esProduccionReal(request: ConHeaders): boolean {
   return process.env.VERCEL_ENV === "production" && hostDe(request) === HOST_PRODUCCION;
 }
 
-export function esEquipo(request: Request): boolean {
+export function esEquipo(request: ConHeaders): boolean {
   return hayMarcaEquipo(request.headers.get("cookie"));
 }
 
 /** Producción real y no es una visita del equipo. */
-export function debeRegistrar(request: Request): boolean {
+export function debeRegistrar(request: ConHeaders): boolean {
   return esProduccionReal(request) && !esEquipo(request);
 }
 
 /** Log de lo que se habría escrito/enviado, cuando no se registra. */
-export function simular(destino: string, datos: unknown, request: Request) {
+export function simular(destino: string, datos: unknown, request: ConHeaders) {
   const motivo = esEquipo(request)
     ? "modo equipo"
     : `entorno ${process.env.VERCEL_ENV ?? "local"}, host ${hostDe(request)}`;
