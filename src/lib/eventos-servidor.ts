@@ -1,5 +1,5 @@
 import { debeRegistrar, simular } from "@/lib/entorno";
-import { supabaseServidor } from "@/lib/supabase-servidor";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { EVENTO_META, type TipoEvento } from "@/lib/tracking";
 import { COOKIE_ANUNCIO, limpiarUtm } from "@/lib/origen";
 import { refAnuncioServidor } from "@/lib/anuncios-ref";
@@ -107,7 +107,9 @@ export async function guardarEvento(tipo: TipoEvento, c: Cuerpo, request: Reques
     detalle: await detalleDe(tipo, c, request),
   };
   if (!debeRegistrar(request)) return simular("web_eventos", fila, request);
-  const { error } = await supabaseServidor.from("web_eventos").insert(fila);
+  const db = supabaseAdmin();
+  if (!db) return console.error("[TRACK] web_eventos: falta SUPABASE_SERVICE_ROLE_KEY");
+  const { error } = await db.from("web_eventos").insert(fila);
   if (error) console.error("[TRACK] web_eventos", error.message);
 }
 

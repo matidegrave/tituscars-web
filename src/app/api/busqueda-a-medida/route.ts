@@ -1,5 +1,5 @@
 import { debeRegistrar, simular } from "@/lib/entorno";
-import { supabaseServidor } from "@/lib/supabase-servidor";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { demasiadas, dentroDelLimite, ipDe } from "@/lib/rate-limit";
 
 // Formulario "Te lo buscamos": valida en el servidor y guarda en
@@ -143,7 +143,12 @@ export async function POST(request: Request) {
     simular("busquedas_web", { ...fila, nombre: nombre && "[oculto]", celular: celular && "[oculto]" }, request);
     return ok();
   }
-  const { error } = await supabaseServidor.from("busquedas_web").insert(fila);
+  const db = supabaseAdmin();
+  if (!db) {
+    console.error("[BUSQUEDA] busquedas_web: falta SUPABASE_SERVICE_ROLE_KEY");
+    return Response.json({ error: "No se pudo guardar" }, { status: 500 });
+  }
+  const { error } = await db.from("busquedas_web").insert(fila);
   if (error) {
     console.error("[BUSQUEDA] busquedas_web", error.message);
     return Response.json({ error: "No se pudo guardar" }, { status: 500 });
