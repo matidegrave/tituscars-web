@@ -1,14 +1,16 @@
 import { WHATSAPP_CONSIGNAS } from "@/lib/config";
 import { linkWhatsapp } from "@/lib/whatsapp";
 import type { DatosInforme, Informe } from "@/lib/informe";
+import { GraficoDias } from "./grafico-dias";
 import s from "./informe.module.css";
 
 /**
- * El informe tal como lo ve el consignante. Un solo componente para la página
- * pública (/informe/[token], datos de la base) y la vista previa del panel de
- * revisión de gestión: lo único que cambia es de dónde salen los datos.
- * Sin hooks ni APIs del servidor, así sirve en los dos lados; el gráfico es
- * HTML/CSS (el tooltip, con :hover), sin JS.
+ * El informe tal como lo ve el consignante: el ÚNICO lugar donde se dibuja un
+ * informe. Lo usan la página pública (/informe/[token], datos de la base) y la
+ * vista previa del panel de revisión de gestión (/informe/preview, datos por
+ * postMessage). No sabe en cuál está: sin flag de preview ni un if por ruta.
+ * Sin hooks ni APIs del servidor, así sirve en los dos lados; el gráfico día
+ * por día es el único componente de cliente (arrastre con el dedo).
  */
 
 const MENSAJE_INFORME = "Hola! Te escribo por el informe de publicación de mi auto.";
@@ -121,32 +123,11 @@ function Numeros({ d }: { d: DatosInforme }) {
 
 function DiaPorDia({ d }: { d: DatosInforme }) {
   if (d.serie.length === 0) return null;
-  const max = Math.max(1, ...d.serie.map((x) => x.visitas));
-  const paso = Math.max(1, Math.ceil(d.serie.length / 8));
   const mlAtrasado = d.ml_hasta !== null && d.ml_hasta < d.periodo.hasta;
   return (
     <div className={`${s.card} ${s.flush}`}>
       <h2>Día por día</h2>
-      <div className={s.bars} role="img" aria-label="Visitas por día del período">
-        {d.serie.map((x) => {
-          const alto = (x.visitas / max) * 100;
-          return (
-            <div key={x.fecha} className={s.bcol}>
-              {x.visitas > 0 && <div className={s.bar} style={{ height: `${alto}%` }} />}
-              {x.consultas > 0 && <span className={s.dot} style={{ bottom: `calc(${alto}% + 6px)` }} />}
-              <span className={s.tip}>
-                {ddmm(x.fecha)} — {x.visitas} {x.visitas === 1 ? "visita" : "visitas"}
-                {x.consultas > 0 && ` · ${x.consultas} ${x.consultas === 1 ? "consulta" : "consultas"}`}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <div className={s.xax} aria-hidden="true">
-        {d.serie.map((x, i) => (
-          <span key={x.fecha}>{i % paso === 0 ? x.fecha.slice(8, 10) : ""}</span>
-        ))}
-      </div>
+      <GraficoDias serie={d.serie} visitasTotal={d.numeros.visitas_total} />
       <div className={s.legline}>
         <span className={s.swatch} /> Día con consulta por WhatsApp
       </div>
@@ -181,9 +162,30 @@ function DiaPorDia({ d }: { d: DatosInforme }) {
   );
 }
 
+// Portales que no informan de dónde vienen sus visitas: no aparecen en "De
+// dónde vinieron", y sin la nota el cliente lee la ausencia como que no lo
+// publicamos ahí. Se nombran SÓLO los que están en d.portales de este auto
+// (lo que dice "Dónde está publicado hoy"): nunca se afirma que está
+// publicado en un portal que el informe no lista.
+const SIN_ORIGEN = ["De Ruedas", "Clasificados La Voz", "Facebook Marketplace"];
+
+function enumerar(nombres: string[]): string {
+  return nombres.length < 2 ? nombres.join("") : `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
+}
+
+function notaSinOrigen(portales: string[]): string | null {
+  const sin = SIN_ORIGEN.filter((p) => portales.includes(p));
+  if (sin.length === 0) return null;
+  if (sin.length === 1) {
+    return `${sin[0]} no informa de dónde vienen sus visitas, por eso no aparece en este listado. El auto sí está publicado ahí.`;
+  }
+  return `${enumerar(sin)} no informan de dónde vienen sus visitas, por eso no aparecen en este listado. El auto sí está publicado en ${sin.length === 2 ? "los dos" : "todos ellos"}.`;
+}
+
 function Origen({ d }: { d: DatosInforme }) {
   if (d.origen.length === 0) return null;
   const max = Math.max(...d.origen.map((o) => o.visitas));
+  const nota = notaSinOrigen(d.portales);
   return (
     <div className={s.card}>
       <h2>De dónde vinieron las visitas</h2>
@@ -198,6 +200,11 @@ function Origen({ d }: { d: DatosInforme }) {
           </div>
         ))}
       </div>
+      {nota && (
+        <p className={s.sub} style={{ marginTop: 14 }} data-testid="nota-sin-origen">
+          {nota}
+        </p>
+      )}
     </div>
   );
 }
@@ -258,13 +265,12 @@ function Portales({ d }: { d: DatosInforme }) {
   );
 }
 
-export function InformeVista({ informe }: { informe: Informe }) {
-  const d = informe.datos;
+export function InformeVista({ datos: d, resumen }: Informe) {
   return (
     <div className={s.pagina}>
       <div className={s.wrap}>
         <Cabecera d={d} />
-        {informe.resumen && <Resumen texto={informe.resumen} />}
+        {resumen && <Resumen texto={resumen} />}
         <Numeros d={d} />
         <DiaPorDia d={d} />
         <Origen d={d} />

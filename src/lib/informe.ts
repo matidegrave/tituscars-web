@@ -63,9 +63,9 @@ const numONull = (v: unknown): number | null | undefined => (v === null || v ===
 const texto = (v: unknown, max: number): string | undefined =>
   typeof v === "string" && v.length <= max ? v : undefined;
 
-/** `datos` con la forma esperada, o null si falta algo imprescindible. */
-export function leerDatos(v: unknown): DatosInforme | null {
-  if (!esObj(v)) return null;
+/** `datos` con la forma esperada, o el primer campo imprescindible que falta o no sirve. */
+export function leerDatos(v: unknown): { datos: DatosInforme } | { falta: string } {
+  if (!esObj(v)) return { falta: "datos" };
   const periodo = esObj(v.periodo) ? v.periodo : null;
   const numeros = esObj(v.numeros) ? v.numeros : null;
   const precio = esObj(v.precio) ? v.precio : {};
@@ -76,8 +76,11 @@ export function leerDatos(v: unknown): DatosInforme | null {
   const hasta = fecha(periodo?.hasta);
   const visitas = num(numeros?.visitas_total);
   const consultas = num(numeros?.consultas_total);
-  if (!vehiculo || !dominio || !generado || !desde || !hasta || visitas === undefined || consultas === undefined) {
-    return null;
+  const falta = !vehiculo ? "vehiculo" : !dominio ? "dominio" : !generado ? "generado_el"
+    : !desde ? "periodo.desde" : !hasta ? "periodo.hasta"
+    : visitas === undefined ? "numeros.visitas_total" : consultas === undefined ? "numeros.consultas_total" : null;
+  if (falta || !vehiculo || !dominio || !generado || !desde || !hasta || visitas === undefined || consultas === undefined) {
+    return { falta: falta ?? "datos" };
   }
 
   const serie: DiaInforme[] = [];
@@ -123,7 +126,7 @@ export function leerDatos(v: unknown): DatosInforme | null {
         !!c.fecha && c.precio_anterior !== undefined && c.precio_nuevo !== undefined
     );
 
-  return {
+  return { datos: {
     generado_el: generado,
     vehiculo,
     anio: numONull(v.anio) ?? null,
@@ -148,15 +151,19 @@ export function leerDatos(v: unknown): DatosInforme | null {
     portales: (Array.isArray(v.portales) ? v.portales : [])
       .map((p) => (esObj(p) ? texto(p.nombre, 60) : undefined))
       .filter((p): p is string => !!p),
-  };
+  } };
 }
 
 /** La respuesta cruda de informe_publico (jsonb o null) -> estado de la página. */
 export function leerResultado(v: unknown): ResultadoInforme {
   if (!esObj(v)) return { estado: "no_encontrado" };
   if (v.vencido === true) return { estado: "vencido" };
-  const datos = leerDatos(v.datos);
-  if (!datos) return { estado: "no_encontrado" };
-  const resumen = typeof v.resumen === "string" && v.resumen.trim() ? v.resumen.trim().slice(0, 4000) : null;
-  return { estado: "ok", datos, resumen };
+  const leido = leerDatos(v.datos);
+  if ("falta" in leido) return { estado: "no_encontrado" };
+  return { estado: "ok", datos: leido.datos, resumen: leerResumen(v.resumen) };
+}
+
+/** El resumen que ve el cliente (null si vacío). */
+export function leerResumen(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim().slice(0, 4000) : null;
 }

@@ -74,5 +74,5 @@ export default async function PaginaInforme({ params }: PageProps<"/informe/[tok
     }
   }
 
-  return <InformeVista informe={resultado} />;
+  return <InformeVista datos={resultado.datos} resumen={resultado.resumen} />;
 }

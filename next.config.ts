@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { origenesErp } from "./src/lib/informe-origenes";
 
 // Versión del build: en Vercel, el commit; en local, la hora del build. Se
 // graba en el bundle (cliente y servidor) y la usa el VersionGuard.
@@ -28,18 +29,46 @@ const CSP = [
   "report-uri /api/csp-report",
 ].join("; ");
 
-const HEADERS_SEGURIDAD = [
+const HEADERS_BASE = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+
+const HEADERS_SEGURIDAD = [
+  ...HEADERS_BASE,
+  { key: "X-Frame-Options", value: "DENY" },
   { key: "Content-Security-Policy-Report-Only", value: CSP },
+];
+
+// /informe/preview: la ÚNICA ruta embebible, desde el panel de revisión del ERP
+// (contrato cerrado: src/lib/informe-preview.ts; orígenes en informe-origenes.ts). Sin X-Frame-Options y con
+// una CSP APLICADA que sólo tiene frame-ancestors = los orígenes del ERP
+// (+ http://localhost:3000 en `next dev`, nunca en producción). La CSP
+// Report-Only de siempre va sin su frame-ancestors 'none' (si no, cada vista
+// previa reportaría una violación).
+const RUTA_PREVIEW = "/informe/preview";
+const HEADERS_PREVIEW = [
+  ...HEADERS_BASE,
+  {
+    key: "Content-Security-Policy",
+    value: `frame-ancestors ${origenesErp(process.env.NODE_ENV === "development").join(" ")}`,
+  },
+  {
+    key: "Content-Security-Policy-Report-Only",
+    value: CSP.replace("frame-ancestors 'none'; ", ""),
+  },
 ];
 
 const nextConfig: NextConfig = {
   async headers() {
-    return [{ source: "/:path*", headers: HEADERS_SEGURIDAD }];
+    // En Next un header no se borra con otra regla: la global excluye la
+    // vista previa (sólo esa ruta exacta) y la vista previa tiene la suya.
+    return [
+      { source: "/:path((?!informe/preview$).*)", headers: HEADERS_SEGURIDAD },
+      { source: RUTA_PREVIEW, headers: HEADERS_PREVIEW },
+    ];
   },
   env: {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,

@@ -428,3 +428,276 @@ test("informe: en el iPhone no tiene scroll horizontal ni errores de consola", a
     await navegador.close();
   }
 });
+
+// ─── /informe/preview: vista previa embebida en el ERP (contrato cerrado) ────
+// Contrato: docs/informe-tanda-pagina-publica.md del repo de gestión. El ERP
+// se simula con una página servida por Playwright (route, no sale a internet)
+// en el origen exacto del ERP. Chromium no deja que una página https pública
+// cargue http://localhost en un iframe, así que la web también va por un
+// origen https inventado (WEB_PRUEBA, .test: no existe) que Playwright
+// responde con este build. Nada sale a internet ni a tituscars.com.
+const WEB_PRUEBA = "https://web.tituscars-prueba.test";
+
+const ORIGENES_ERP = ["https://softwaretitus.vercel.app", "https://tituscars.vercel.app"];
+const PREVIEW = "titus.informe.preview.";
+const FRAME_ANCESTORS = `frame-ancestors ${ORIGENES_ERP.join(" ")}`;
+
+// Datos INVENTADOS con la forma de informe_publico().datos (sin interno).
+const DATOS_PRUEBA = {
+  version: 1,
+  generado_el: "2026-10-14",
+  vehiculo: "Renault Duster Confort 1.6 4x2",
+  anio: 2014,
+  km: 76632,
+  dominio: "AA000AA",
+  tipo: "programado",
+  numero: 4,
+  periodo: { desde: "2026-09-30", hasta: "2026-10-14", dias_publicables: 15, dias_fuera: 0, recortado: false },
+  dias_publicado: 53,
+  precio: { actual: 14500000, moneda: "ARS", cambios_periodo: [], sin_cambios_desde: "desde que lo publicamos" },
+  numeros: {
+    visitas_total: 221,
+    visitas_ml: 40,
+    visitas_catalogo: 181,
+    personas_catalogo: 170,
+    consultas_total: 6,
+    conversion: 2.7,
+    favoritos: 3,
+    compartidos: 1,
+  },
+  ml_hasta: "2026-10-12",
+  serie: [10, 4, 10, 9, 18, 21, 16, 16, 22, 22, 16, 19, 20, 8, 10].map((v, i) => ({
+    fecha: i === 0 ? "2026-09-30" : `2026-10-${String(i).padStart(2, "0")}`,
+    visitas_catalogo: v,
+    visitas_ml: i < 13 ? 0 : null,
+    consultas_catalogo: [1, 0, 0, 0, 0, 2, 0, 1, 1, 1, 0, 0, 0, 0, 0][i],
+  })),
+  origen: [
+    { fuente: "Instagram", visitas: 122 },
+    { fuente: "Directo / guardado", visitas: 62 },
+  ],
+  segmento: {
+    banda: "$12.000.000 a $17.000.000",
+    n: 16,
+    p25: 63,
+    mediana: 113,
+    p75: 198,
+    posicion: "cuarto superior",
+    conversion_mediana: 3.4,
+  },
+  youtube: { views_acumuladas: 900, views_periodo: 120 },
+  portales: [
+    { nombre: "Mercado Libre" },
+    { nombre: "tituscars.com" },
+    { nombre: "De Ruedas" },
+    { nombre: "Clasificados La Voz" },
+    { nombre: "Facebook Marketplace" },
+  ],
+};
+const datosMsg = (datos = DATOS_PRUEBA, resumen = "La publicación tiene muy buena exposición.") => ({
+  tipo: `${PREVIEW}datos`,
+  version: 1,
+  informe: { datos, resumen },
+});
+
+/** Un "ERP" en `origen` con un iframe a `ruta` de este build. */
+async function abrirEnErp(contexto, origen, ruta = "/informe/preview") {
+  await contexto.route(`${WEB_PRUEBA}/**`, async (r) =>
+    r.fulfill({ response: await r.fetch({ url: r.request().url().replace(WEB_PRUEBA, BASE) }) })
+  );
+  const pagina = await contexto.newPage();
+  await pagina.route(`${origen}/panel`, (r) =>
+    r.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><body style="margin:0">
+<iframe id="f" src="${WEB_PRUEBA}${ruta}" style="border:0;width:390px;height:2400px"></iframe>
+<script>
+  window.recibidos = [];
+  addEventListener("message", (e) => {
+    if (e.source === document.getElementById("f").contentWindow) recibidos.push({ origen: e.origin, data: e.data });
+  });
+  window.mandar = (m) => document.getElementById("f").contentWindow.postMessage(m, ${JSON.stringify(WEB_PRUEBA)});
+</script></body>`,
+    })
+  );
+  await pagina.goto(`${origen}/panel`);
+  return pagina;
+}
+
+const recibidos = (pagina) => pagina.evaluate(() => window.recibidos);
+async function esperarMensaje(pagina, tipo, desde = 0) {
+  await pagina.waitForFunction(
+    ([t, d]) => window.recibidos.slice(d).some((m) => m.data?.tipo === t),
+    [tipo, desde],
+    { timeout: 10_000 }
+  );
+  return (await recibidos(pagina)).slice(desde).find((m) => m.data?.tipo === tipo);
+}
+
+test("informe preview: headers (sólo esa ruta se puede embeber, y sólo desde el ERP)", async () => {
+  const r = await fetch(`${BASE}/informe/preview`);
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get("x-frame-options"), null, "preview: sin X-Frame-Options");
+  assert.equal(r.headers.get("content-security-policy"), FRAME_ANCESTORS, "preview: CSP aplicada = frame-ancestors del ERP");
+  assert.doesNotMatch(
+    r.headers.get("content-security-policy-report-only") ?? "",
+    /frame-ancestors/,
+    "preview: el Report-Only no lo contradice"
+  );
+  const cc = r.headers.get("cache-control") ?? "";
+  assert.match(cc, /private/);
+  assert.match(cc, /no-store/);
+  assert.match(await r.text(), /<meta name="robots" content="noindex, nofollow"/, "preview: noindex");
+  for (const ruta of ["/informe/abc", `/informe/${"0".repeat(36)}`, "/informe/previewx", "/", "/autos"]) {
+    const h = (await fetch(`${BASE}${ruta}`, { redirect: "manual" })).headers;
+    assert.equal(h.get("x-frame-options"), "DENY", `${ruta}: X-Frame-Options DENY`);
+    assert.equal(h.get("content-security-policy"), null, `${ruta}: sin la CSP de la vista previa`);
+    assert.match(h.get("content-security-policy-report-only") ?? "", /frame-ancestors 'none'/, `${ruta}: frame-ancestors 'none'`);
+  }
+});
+
+test("informe preview: el ERP la embebe, valida mensajes y nunca queda en blanco", async () => {
+  const navegador = await chromium.launch();
+  try {
+    const contexto = await navegador.newContext({ viewport: { width: 390, height: 900 }, hasTouch: true });
+    for (const origen of ORIGENES_ERP) {
+      const erp = await abrirEnErp(contexto, origen);
+      const marco = erp.frameLocator("#f");
+      // lista, una vez, desde el origen real de la web.
+      const lista = await esperarMensaje(erp, `${PREVIEW}lista`);
+      assert.deepEqual(lista.data, { tipo: `${PREVIEW}lista`, version: 1 });
+      assert.equal(lista.origen, WEB_PRUEBA);
+
+      // datos válidos -> InformeVista + renderizado.
+      let n = (await recibidos(erp)).length;
+      await erp.evaluate((m) => window.mandar(m), datosMsg());
+      const ok = await esperarMensaje(erp, `${PREVIEW}renderizado`, n);
+      assert.deepEqual(ok.data, { tipo: `${PREVIEW}renderizado`, version: 1 });
+      assert.equal(await marco.locator("h1").innerText(), DATOS_PRUEBA.vehiculo, `${origen}: dibuja el informe`);
+      assert.ok((await marco.locator("body").innerText()).includes("muy buena exposición"));
+      assert.equal(
+        await marco.locator('[data-testid="nota-sin-origen"]').innerText(),
+        "De Ruedas, Clasificados La Voz y Facebook Marketplace no informan de dónde vienen sus visitas, por eso no " +
+          "aparecen en este listado. El auto sí está publicado en todos ellos.",
+        "nota de los portales sin origen"
+      );
+
+      // Cada datos reemplaza al anterior (el chico edita el resumen).
+      n = (await recibidos(erp)).length;
+      await erp.evaluate((m) => window.mandar(m), datosMsg(DATOS_PRUEBA, "Resumen editado por el chico."));
+      await esperarMensaje(erp, `${PREVIEW}renderizado`, n);
+      assert.ok((await marco.locator("body").innerText()).includes("Resumen editado por el chico."));
+      assert.equal((await recibidos(erp)).filter((m) => m.data?.tipo === `${PREVIEW}lista`).length, 1, "lista una sola vez");
+      await erp.close();
+    }
+
+    // Mensajes fuera del contrato: error visible + error al ERP.
+    const erp = await abrirEnErp(contexto, ORIGENES_ERP[0]);
+    const marco = erp.frameLocator("#f");
+    await esperarMensaje(erp, `${PREVIEW}lista`);
+    const sinVersion = { ...DATOS_PRUEBA };
+    delete sinVersion.version;
+    const CASOS = [
+      [{ tipo: "x", version: 1 }, /tipo de mensaje inesperado/],
+      [{ ...datosMsg(), version: 2 }, /versión de contrato no soportada/],
+      ["texto suelto", /no es un objeto/],
+      [datosMsg({ ...DATOS_PRUEBA, interno: { motivos: ["x"] } }), /datos\.interno no puede llegar a la vista previa/],
+      [datosMsg(sinVersion), /informe\.datos\.version/],
+      [datosMsg({ ...DATOS_PRUEBA, serie: "x" }), /informe\.datos\.serie/],
+      [datosMsg({ ...DATOS_PRUEBA, periodo: { hasta: "2026-10-14" } }), /informe\.datos\.periodo\.desde/],
+      [{ ...datosMsg(), informe: { datos: DATOS_PRUEBA, resumen: 3 } }, /informe\.resumen/],
+    ];
+    for (const [msg, motivo] of CASOS) {
+      const n = (await recibidos(erp)).length;
+      await erp.evaluate((m) => window.mandar(m), msg);
+      const error = await esperarMensaje(erp, `${PREVIEW}error`, n);
+      assert.match(error.data.motivo, motivo, `motivo al ERP: ${JSON.stringify(msg).slice(0, 60)}`);
+      assert.equal(error.data.version, 1);
+      const recuadro = marco.locator('[data-testid="preview-error"]');
+      assert.ok(await recuadro.isVisible(), "error visible");
+      assert.match(await recuadro.innerText(), /Vista previa no disponible/);
+      assert.match(await recuadro.innerText(), motivo);
+    }
+    // La nota nombra sólo los portales que este auto tiene (nunca afirma uno que no lista).
+    let m = (await recibidos(erp)).length;
+    const dosPortales = DATOS_PRUEBA.portales.filter((p) => p.nombre !== "Facebook Marketplace");
+    await erp.evaluate((x) => window.mandar(x), datosMsg({ ...DATOS_PRUEBA, portales: dosPortales }));
+    await esperarMensaje(erp, `${PREVIEW}renderizado`, m);
+    assert.equal(
+      await marco.locator('[data-testid="nota-sin-origen"]').innerText(),
+      "De Ruedas y Clasificados La Voz no informan de dónde vienen sus visitas, por eso no aparecen en este " +
+        "listado. El auto sí está publicado en los dos."
+    );
+    m = (await recibidos(erp)).length;
+    const sinPortales = DATOS_PRUEBA.portales.filter((p) => !["De Ruedas", "Clasificados La Voz", "Facebook Marketplace"].includes(p.nombre));
+    await erp.evaluate((x) => window.mandar(x), datosMsg({ ...DATOS_PRUEBA, portales: sinPortales }));
+    await esperarMensaje(erp, `${PREVIEW}renderizado`, m);
+    assert.equal(await marco.locator('[data-testid="nota-sin-origen"]').count(), 0, "sin esos portales, sin nota");
+
+    // Un datos válido después de un error vuelve a dibujar.
+    const n = (await recibidos(erp)).length;
+    await erp.evaluate((m) => window.mandar(m), datosMsg());
+    await esperarMensaje(erp, `${PREVIEW}renderizado`, n);
+    assert.equal(await marco.locator("h1").innerText(), DATOS_PRUEBA.vehiculo);
+
+    // El gráfico se arrastra con el dedo (touch real por CDP): el día va en el
+    // renglón fijo de arriba; sin día, sólo las visitas de la ficha.
+    const cdp = await contexto.newCDPSession(erp);
+    const zona = await marco.locator('[data-testid="grafico-dias"]').boundingBox();
+    const xDia = (i) => zona.x + ((i + 0.5) / DATOS_PRUEBA.serie.length) * zona.width;
+    const toque = (type, x) =>
+      cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y: zona.y + 20 }] });
+    const lectura = marco.locator('[data-testid="lectura-dia"]');
+    assert.equal(await lectura.innerText(), "En el período: 221 visitas", "sin día: sólo las visitas de la ficha");
+    await toque("touchStart", xDia(2));
+    assert.equal(await lectura.innerText(), "02/10 — 10 visitas", "toque en el espacio vacío sobre la barra");
+    for (let i = 2; i <= 5; i++) await toque("touchMove", xDia(i));
+    await toque("touchEnd");
+    assert.equal(await lectura.innerText(), "05/10 — 21 visitas · 2 consultas por WhatsApp", "queda el último día");
+  } finally {
+    await navegador.close();
+  }
+});
+
+test("informe preview: no se embebe desde otro origen; la del cliente no se embebe nunca", async () => {
+  const navegador = await chromium.launch();
+  try {
+    const contexto = await navegador.newContext();
+    // Otro sitio, y el ERP local (sólo vale en `next dev`, nunca en producción).
+    for (const [origen, ruta] of [
+      ["https://otro-sitio.example", "/informe/preview"],
+      ["http://localhost:3000", "/informe/preview"],
+      [ORIGENES_ERP[0], `/informe/${"0".repeat(36)}`],
+    ]) {
+      const pagina = await abrirEnErp(contexto, origen, ruta);
+      await pagina.waitForTimeout(2500);
+      assert.deepEqual(await recibidos(pagina), [], `${origen} -> ${ruta}: no carga (sin lista)`);
+      const marco = pagina.frames().find((f) => f !== pagina.mainFrame());
+      const texto = await marco?.evaluate(() => document.body?.innerText ?? "").catch(() => "");
+      assert.ok(!/Esperando los datos|No encontramos este informe/.test(texto ?? ""), `${origen} -> ${ruta}: bloqueado`);
+      await pagina.close();
+    }
+  } finally {
+    await navegador.close();
+  }
+});
+
+test("informe preview: abierta suelta, a los 10 s muestra el error", async () => {
+  const navegador = await chromium.launch();
+  try {
+    const pagina = await navegador.newPage();
+    const consola = [];
+    pagina.on("console", (m) => m.type() === "error" && consola.push(m.text()));
+    await pagina.goto(`${BASE}/informe/preview`);
+    assert.ok(await pagina.locator('[data-testid="preview-esperando"]').isVisible(), "mientras espera, no en blanco");
+    const recuadro = pagina.locator('[data-testid="preview-error"]');
+    await recuadro.waitFor({ timeout: 12_000 });
+    assert.match(await recuadro.innerText(), /Vista previa no disponible[\s\S]*no llegaron los datos de la vista previa/);
+    assert.ok(
+      consola.some((c) => c.includes("no llegaron los datos")),
+      "también en consola"
+    );
+  } finally {
+    await navegador.close();
+  }
+});

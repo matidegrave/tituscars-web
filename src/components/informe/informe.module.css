@@ -13,6 +13,7 @@
   --ring: rgba(11, 11, 11, 0.1);
   --blue: #2a78d6;
   --blue-soft: #9ec5f4;
+  --blue-deep: #184f95;
   --good: #0ca30c;
   --serious: #ec835a;
   --ok-text: #006300;
@@ -39,6 +40,7 @@
     --ring: rgba(255, 255, 255, 0.1);
     --blue: #3987e5;
     --blue-soft: #1c5cab;
+    --blue-deep: #86b6ef;
     --ok-text: #0ca30c;
     color-scheme: dark;
   }
@@ -183,13 +185,57 @@
 }
 
 /* gráfico de barras */
+
+/* Renglón fijo arriba del gráfico: el día tocado (o el total). Alto fijo de dos
+   renglones para que el gráfico no salte al tocarlo. */
+.lectura {
+  display: flex;
+  align-items: flex-end;
+  min-height: 2.9em;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lectura b {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/* Todo el ancho del gráfico es la zona del dedo. pan-y: el arrastre horizontal
+   es del gráfico, el vertical sigue scrolleando la página. */
+.zonaTactil {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  padding-top: 14px;
+}
+
 .bars {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 2px;
   height: 132px;
   border-bottom: 1px solid var(--axis);
-  margin-top: 26px;
+}
+
+.guia {
+  position: absolute;
+  top: -14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--ink);
+  opacity: 0.45;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.elegido .bar {
+  background: var(--blue-deep);
 }
 
 .bcol {
@@ -208,8 +254,16 @@
   width: 100%;
 }
 
-.bcol:hover .bar {
-  opacity: 0.72;
+/* El hover (opacidad + tooltip) es sólo para mouse: en el celu un toque deja
+   el :hover pegado y el globito quedaría bajo el dedo. */
+@media (hover: hover) and (pointer: fine) {
+  .bcol:hover .bar {
+    opacity: 0.72;
+  }
+
+  .bcol:hover .tip {
+    display: block;
+  }
 }
 
 .dot {
@@ -238,10 +292,6 @@
   transform: translate(-50%, -100%);
   z-index: 5;
   font-variant-numeric: tabular-nums;
-}
-
-.bcol:hover .tip {
-  display: block;
 }
 
 /* que el tooltip de las primeras y últimas barras no se salga de la pantalla */
@@ -499,6 +549,27 @@
   padding: 12px 20px;
   border-radius: 999px;
   text-decoration: none;
+}
+
+/* error de la vista previa (contrato con el ERP): visible, nunca en blanco */
+.errorPreview {
+  border: 2px solid #d03b3b;
+  background: rgba(208, 59, 59, 0.08);
+  color: var(--ink);
+  border-radius: var(--r);
+  padding: 18px 20px;
+}
+
+.errorPreview b {
+  color: #d03b3b;
+  font-size: 16px;
+}
+
+.errorPreview p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-word;
 }
 
 @media (max-width: 520px) {
