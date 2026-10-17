@@ -383,8 +383,28 @@ test("informe: token inválido o inexistente, sin marco, sin caché ni cookies, 
   }
   // /informe sin token no es una ruta: al catálogo, como cualquier URL vieja.
   assert.equal((await fetch(`${BASE}/informe/`, { redirect: "manual" })).status, 308);
+  // robots.txt NO bloquea /informe/ (la previsualización de WhatsApp lo respeta
+  // y sin leer la página no hay OG ni se lee el noindex); /autos? sigue fuera.
   const robots = await (await fetch(`${BASE}/robots.txt`)).text();
-  assert.match(robots, /Disallow: \/informe\//, "robots.txt: /informe/ fuera");
+  assert.doesNotMatch(robots, /informe/, "robots.txt: sin Disallow de /informe/");
+  assert.match(robots, /Disallow: \/autos\?/, "robots.txt: /autos? sigue fuera");
+});
+
+test("informe: los robots de previsualización leen el OG genérico y el noindex", async () => {
+  const ROBOTS = {
+    WhatsApp: "WhatsApp/2.23.20.0",
+    Facebook: "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+    Googlebot: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+  };
+  for (const [nombre, ua] of Object.entries(ROBOTS)) {
+    const r = await fetch(`${BASE}/informe/${"0".repeat(36)}`, { redirect: "manual", headers: { "user-agent": ua } });
+    assert.equal(r.status, 200, `${nombre}: status`);
+    const html = await r.text();
+    const og = html.match(/<meta property="og:title" content="([^"]*)"/)?.[1];
+    assert.equal(og, "Informe de publicación — Titus Cars", `${nombre}: og:title genérico`);
+    assert.doesNotMatch(html, /og:image" content="[^"]*storage\/v1/, `${nombre}: sin foto del auto en el OG`);
+    assert.match(html, /<meta name="robots" content="noindex, nofollow"/, `${nombre}: noindex`);
+  }
 });
 
 test("informe: en el iPhone no tiene scroll horizontal ni errores de consola", async () => {

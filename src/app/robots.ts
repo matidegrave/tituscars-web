@@ -20,8 +20,10 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // /informe/: el informe al consignante; el token es su única protección.
-      disallow: ["/autos?", "/informe/"],
+      // /informe/ NO va acá: el robot de previsualización de WhatsApp respeta
+      // robots.txt y sin poder leer la página no arma el Open Graph; además un
+      // Disallow impide leer el noindex. Lo saca de Google su meta noindex.
+      disallow: "/autos?",
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

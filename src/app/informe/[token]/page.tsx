@@ -9,7 +9,8 @@ import { supabase } from "@/lib/supabase";
 // /informe/[token]: el informe de publicación que abre el consignante desde un
 // link de WhatsApp (contrato: docs/informe-tanda-pagina-publica.md del repo de
 // gestión). Sin el marco del sitio ni Pixel (layout: RUTAS_SIN_SITIO), sin
-// cookies (el proxy no pone ninguna acá), fuera de Google (noindex y robots).
+// cookies (el proxy no pone ninguna acá), fuera de Google con el meta noindex (NO con
+// robots.txt: bloquearía la previsualización de WhatsApp y la lectura del noindex).
 //
 // Dinámica y sin caché (Cache-Control private, no-store): que ningún CDN sirva
 // el informe de un cliente a otro por un error de clave.
