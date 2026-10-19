@@ -28,7 +28,8 @@ export interface DatosInforme {
   dominio: string;
   tipo: "programado" | "a_pedido";
   numero: number | null;
-  periodo: { desde: string; hasta: string };
+  /** dias_publicables: días que el auto estuvo publicado dentro del período (null en informes viejos). */
+  periodo: { desde: string; hasta: string; dias_publicables: number | null };
   dias_publicado: number | null;
   precio: {
     actual: number | null;
@@ -134,7 +135,7 @@ export function leerDatos(v: unknown): { datos: DatosInforme } | { falta: string
     dominio,
     tipo: v.tipo === "a_pedido" ? "a_pedido" : "programado",
     numero: numONull(v.numero) ?? null,
-    periodo: { desde, hasta },
+    periodo: { desde, hasta, dias_publicables: numONull(periodo?.dias_publicables) ?? null },
     dias_publicado: numONull(v.dias_publicado) ?? null,
     precio: {
       actual: numONull(precio.actual) ?? null,

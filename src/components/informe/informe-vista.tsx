@@ -22,6 +22,8 @@ const decimal = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
 /** "2026-09-17" -> "17/09" (sin Date: las fechas ya vienen en hora de Córdoba). */
 const ddmm = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
 const ddmmaaaa = (f: string) => `${ddmm(f)}/${f.slice(0, 4)}`;
+/** El período, igual en el encabezado y en el título de los números. */
+const rangoPeriodo = (d: DatosInforme) => `${ddmm(d.periodo.desde)} – ${ddmmaaaa(d.periodo.hasta)}`;
 
 function precio(valor: number, moneda: "ARS" | "USD"): string {
   return `${moneda === "USD" ? "US$ " : "$"}${entero.format(valor)}`;
@@ -51,13 +53,13 @@ function Cabecera({ d }: { d: DatosInforme }) {
         <div className={s.cyc}>
           {d.numero !== null ? `Informe N.º ${d.numero}` : "Informe a pedido"}
           <br />
-          {ddmm(d.periodo.desde)} – {ddmmaaaa(d.periodo.hasta)}
+          {rangoPeriodo(d)}
         </div>
       </div>
       <div className={s.meta}>
         {d.dias_publicado !== null && (
           <span>
-            Publicado hace <b>{entero.format(d.dias_publicado)} días</b>
+            Publicado hace <b>{entero.format(d.dias_publicado)} días</b> en total
           </span>
         )}
         {d.precio.actual !== null && (
@@ -92,11 +94,23 @@ function Numeros({ d }: { d: DatosInforme }) {
   const yt = d.youtube;
   return (
     <div className={s.card}>
-      <h2>Los números del período</h2>
+      {/* Mismo rango que el encabezado, para que se lean como el mismo período. Los días son los
+          PUBLICABLES, no la diferencia de fechas: con días fuera de publicación el calendario miente. */}
+      <h2>
+        Los números del período ({rangoPeriodo(d)}
+        {d.periodo.dias_publicables !== null &&
+          ` · ${entero.format(d.periodo.dias_publicables)} día${d.periodo.dias_publicables === 1 ? "" : "s"}`}
+        )
+      </h2>
       <div className={s.tiles}>
         <div className={s.tile}>
           <div className={s.v}>{entero.format(d.numeros.visitas_total)}</div>
           <div className={s.l}>Visitas al aviso</div>
+          {/* Las visitas suman SÓLO Mercado Libre y tituscars.com (los únicos que las informan). Sin
+              esto, al lado de «6 Portales» se leía como el total de los seis. */}
+          <div className={s.d}>
+            {d.portales.includes("Mercado Libre") ? "Mercado Libre y tituscars.com" : "en tituscars.com"}
+          </div>
         </div>
         <div className={s.tile}>
           <div className={s.v}>{entero.format(d.numeros.consultas_total)}</div>
@@ -117,6 +131,36 @@ function Numeros({ d }: { d: DatosInforme }) {
           <div className={s.l}>Portales donde está publicado</div>
         </div>
       </div>
+      <ComoLeer d={d} />
+    </div>
+  );
+}
+
+/**
+ * «Cómo leer estos números», pegado debajo de los casilleros: sin esto «248 Visitas» al lado de
+ * «6 Portales» se lee como 248 repartidas en seis, y son dos canales (ML + catálogo). Antes era
+ * una nota suelta y el ojo la salteaba. Nombra SÓLO los portales que están en d.portales: nunca
+ * afirma que el auto está publicado donde el informe no lo lista.
+ */
+function ComoLeer({ d }: { d: DatosInforme }) {
+  const conMl = d.portales.includes("Mercado Libre");
+  const sin = SIN_ORIGEN.filter((p) => d.portales.includes(p));
+  const fuentes = conMl
+    ? "de Mercado Libre y de nuestro catálogo, que son los dos canales que informan estadísticas"
+    : "de nuestro catálogo, que es el canal que informa estadísticas";
+  const resto = sin.length
+    ? ` ${enumerar(sin)} no las ${sin.length === 1 ? "publica" : "publican"}: tu auto está publicado ahí también, pero esas visitas no se pueden contar. En la realidad, el auto se vio más veces de las que figuran acá.`
+    : "";
+  return (
+    <div className={s.comoLeer} data-testid="como-leer">
+      <div className={s.comoLeerTit}>Cómo leer estos números</div>
+      <p>
+        Las visitas y consultas de arriba salen {fuentes}.{resto}
+      </p>
+      <p>
+        Igual sirven, y mucho. Al medir siempre lo mismo, quincena a quincena, la relación entre visitas y consultas
+        es la forma más clara de ver si el interés sube, se sostiene o cae.
+      </p>
     </div>
   );
 }
@@ -162,30 +206,17 @@ function DiaPorDia({ d }: { d: DatosInforme }) {
   );
 }
 
-// Portales que no informan de dónde vienen sus visitas: no aparecen en "De
-// dónde vinieron", y sin la nota el cliente lee la ausencia como que no lo
-// publicamos ahí. Se nombran SÓLO los que están en d.portales de este auto
-// (lo que dice "Dónde está publicado hoy"): nunca se afirma que está
-// publicado en un portal que el informe no lista.
+// Portales que no informan estadísticas (ni visitas ni de dónde vienen). Los
+// nombra «Cómo leer estos números», SÓLO si están en d.portales de este auto.
 const SIN_ORIGEN = ["De Ruedas", "Clasificados La Voz", "Facebook Marketplace"];
 
 function enumerar(nombres: string[]): string {
   return nombres.length < 2 ? nombres.join("") : `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
 }
 
-function notaSinOrigen(portales: string[]): string | null {
-  const sin = SIN_ORIGEN.filter((p) => portales.includes(p));
-  if (sin.length === 0) return null;
-  if (sin.length === 1) {
-    return `${sin[0]} no informa de dónde vienen sus visitas, por eso no aparece en este listado. El auto sí está publicado ahí.`;
-  }
-  return `${enumerar(sin)} no informan de dónde vienen sus visitas, por eso no aparecen en este listado. El auto sí está publicado en ${sin.length === 2 ? "los dos" : "todos ellos"}.`;
-}
-
 function Origen({ d }: { d: DatosInforme }) {
   if (d.origen.length === 0) return null;
   const max = Math.max(...d.origen.map((o) => o.visitas));
-  const nota = notaSinOrigen(d.portales);
   return (
     <div className={s.card}>
       <h2>De dónde vinieron las visitas</h2>
@@ -200,11 +231,6 @@ function Origen({ d }: { d: DatosInforme }) {
           </div>
         ))}
       </div>
-      {nota && (
-        <p className={s.sub} style={{ marginTop: 14 }} data-testid="nota-sin-origen">
-          {nota}
-        </p>
-      )}
     </div>
   );
 }

@@ -586,3 +586,27 @@
     text-align: left;
   }
 }
+
+/* «Cómo leer estos números»: dentro de la tarjeta de números, pegado a los casilleros. */
+.comoLeer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--grid);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink2);
+}
+.comoLeer p {
+  margin: 0;
+}
+.comoLeer p + p {
+  margin-top: 8px;
+}
+.comoLeerTit {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  margin-bottom: 6px;
+}

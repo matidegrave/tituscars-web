@@ -576,10 +576,12 @@ test("informe preview: el ERP la embebe, valida mensajes y nunca queda en blanco
       assert.equal(await marco.locator("h1").innerText(), DATOS_PRUEBA.vehiculo, `${origen}: dibuja el informe`);
       assert.ok((await marco.locator("body").innerText()).includes("muy buena exposición"));
       assert.equal(
-        await marco.locator('[data-testid="nota-sin-origen"]').innerText(),
-        "De Ruedas, Clasificados La Voz y Facebook Marketplace no informan de dónde vienen sus visitas, por eso no " +
-          "aparecen en este listado. El auto sí está publicado en todos ellos.",
-        "nota de los portales sin origen"
+        await marco.locator('[data-testid="como-leer"] p').first().innerText(),
+        "Las visitas y consultas de arriba salen de Mercado Libre y de nuestro catálogo, que son los dos canales " +
+          "que informan estadísticas. De Ruedas, Clasificados La Voz y Facebook Marketplace no las publican: tu auto " +
+          "está publicado ahí también, pero esas visitas no se pueden contar. En la realidad, el auto se vio más " +
+          "veces de las que figuran acá.",
+        "cómo leer estos números"
       );
 
       // Cada datos reemplaza al anterior (el chico edita el resumen).
@@ -618,21 +620,25 @@ test("informe preview: el ERP la embebe, valida mensajes y nunca queda en blanco
       assert.match(await recuadro.innerText(), /Vista previa no disponible/);
       assert.match(await recuadro.innerText(), motivo);
     }
-    // La nota nombra sólo los portales que este auto tiene (nunca afirma uno que no lista).
+    // «Cómo leer» nombra sólo los portales que este auto tiene (nunca afirma uno que no lista).
     let m = (await recibidos(erp)).length;
     const dosPortales = DATOS_PRUEBA.portales.filter((p) => p.nombre !== "Facebook Marketplace");
     await erp.evaluate((x) => window.mandar(x), datosMsg({ ...DATOS_PRUEBA, portales: dosPortales }));
     await esperarMensaje(erp, `${PREVIEW}renderizado`, m);
-    assert.equal(
-      await marco.locator('[data-testid="nota-sin-origen"]').innerText(),
-      "De Ruedas y Clasificados La Voz no informan de dónde vienen sus visitas, por eso no aparecen en este " +
-        "listado. El auto sí está publicado en los dos."
+    assert.match(
+      await marco.locator('[data-testid="como-leer"] p').first().innerText(),
+      /\. De Ruedas y Clasificados La Voz no las publican: tu auto está publicado ahí también/
     );
     m = (await recibidos(erp)).length;
     const sinPortales = DATOS_PRUEBA.portales.filter((p) => !["De Ruedas", "Clasificados La Voz", "Facebook Marketplace"].includes(p.nombre));
     await erp.evaluate((x) => window.mandar(x), datosMsg({ ...DATOS_PRUEBA, portales: sinPortales }));
     await esperarMensaje(erp, `${PREVIEW}renderizado`, m);
-    assert.equal(await marco.locator('[data-testid="nota-sin-origen"]').count(), 0, "sin esos portales, sin nota");
+    assert.equal(
+      await marco.locator('[data-testid="como-leer"] p').first().innerText(),
+      "Las visitas y consultas de arriba salen de Mercado Libre y de nuestro catálogo, que son los dos canales " +
+        "que informan estadísticas.",
+      "sin esos portales, no se nombra ninguno"
+    );
 
     // Un datos válido después de un error vuelve a dibujar.
     const n = (await recibidos(erp)).length;
@@ -643,6 +649,9 @@ test("informe preview: el ERP la embebe, valida mensajes y nunca queda en blanco
     // El gráfico se arrastra con el dedo (touch real por CDP): el día va en el
     // renglón fijo de arriba; sin día, sólo las visitas de la ficha.
     const cdp = await contexto.newCDPSession(erp);
+    // A la vista antes de medir: «Cómo leer estos números» agrandó la tarjeta de arriba y el gráfico
+    // quedaba fuera de la pantalla (el toque caía en el vacío).
+    await marco.locator('[data-testid="grafico-dias"]').scrollIntoViewIfNeeded();
     const zona = await marco.locator('[data-testid="grafico-dias"]').boundingBox();
     const xDia = (i) => zona.x + ((i + 0.5) / DATOS_PRUEBA.serie.length) * zona.width;
     const toque = (type, x) =>
