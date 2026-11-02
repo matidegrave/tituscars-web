@@ -17,7 +17,6 @@ const MENSAJE_INFORME = "Hola! Te escribo por el informe de publicación de mi a
 export const LINK_WHATSAPP_INFORME = linkWhatsapp(WHATSAPP_CONSIGNAS, MENSAJE_INFORME);
 
 const entero = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
-const decimal = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
 
 /** "2026-09-17" -> "17/09" (sin Date: las fechas ya vienen en hora de Córdoba). */
 const ddmm = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
@@ -29,6 +28,10 @@ function precio(valor: number, moneda: "ARS" | "USD"): string {
   return `${moneda === "USD" ? "US$ " : "$"}${entero.format(valor)}`;
 }
 
+/** Días entre dos fechas AAAA-MM-DD (sin Date local: UTC puro). */
+const diasEntre = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
+const FECHA_ISO = /^d{4}-d{2}-d{2}$/;
+
 const POSICION: Record<string, string> = {
   "cuarto superior": "Está entre los que más se ven de su rango.",
   "entre la mediana y el cuarto superior": "Se ve más que el auto típico de su rango.",
@@ -38,6 +41,12 @@ const POSICION: Record<string, string> = {
 
 function Cabecera({ d }: { d: DatosInforme }) {
   const ultimoCambio = d.precio.cambios_periodo[d.precio.cambios_periodo.length - 1];
+  // Informes nuevos: fecha del último cambio de precio (o del primero). Se cuenta hasta el día en que
+  // se generó el informe, así el número no cambia según cuándo lo abra el dueño.
+  const sinCambiosDias =
+    d.precio.sin_cambios_desde && FECHA_ISO.test(d.precio.sin_cambios_desde)
+      ? Math.max(0, diasEntre(d.precio.sin_cambios_desde, d.generado_el))
+      : null;
   return (
     <div className={s.card}>
       <div className={s.hd}>
@@ -67,10 +76,16 @@ function Cabecera({ d }: { d: DatosInforme }) {
             Precio actual <b>{precio(d.precio.actual, d.precio.moneda)}</b>
           </span>
         )}
-        {ultimoCambio ? (
+        {sinCambiosDias !== null ? (
+          <span>
+            Precio sin cambios hace <b>{entero.format(sinCambiosDias)} {sinCambiosDias === 1 ? "día" : "días"}</b>
+          </span>
+        ) : ultimoCambio ? (
           <span>Precio actualizado el {ddmm(ultimoCambio.fecha)}</span>
         ) : (
-          d.precio.sin_cambios_desde && <span>Sin cambios de precio {d.precio.sin_cambios_desde}</span>
+          d.precio.sin_cambios_desde && !FECHA_ISO.test(d.precio.sin_cambios_desde) && (
+            <span>Sin cambios de precio {d.precio.sin_cambios_desde}</span>
+          )
         )}
       </div>
     </div>
@@ -115,9 +130,6 @@ function Numeros({ d }: { d: DatosInforme }) {
         <div className={s.tile}>
           <div className={s.v}>{entero.format(d.numeros.consultas_total)}</div>
           <div className={s.l}>Consultas recibidas</div>
-          {d.numeros.conversion !== null && d.numeros.visitas_total > 0 && (
-            <div className={s.d}>{decimal.format(d.numeros.conversion)}% de las visitas</div>
-          )}
         </div>
         {yt && (
           <div className={s.tile}>
@@ -236,6 +248,19 @@ function Origen({ d }: { d: DatosInforme }) {
 }
 
 function Posicion({ d }: { d: DatosInforme }) {
+  if (d.stock) {
+    const { n, puesto, visitas_tipicas } = d.stock;
+    return (
+      <div className={s.card}>
+        <h2>Dónde está parado</h2>
+        <p className={s.sub}>
+          De los <b>{entero.format(n)} autos</b> que tenemos publicados, el tuyo fue el <b>puesto {entero.format(puesto)}</b>{" "}
+          en visitas en estos 15 días. Un auto típico del stock tuvo <b>{entero.format(visitas_tipicas)} visitas</b>.
+        </p>
+      </div>
+    );
+  }
+  // Informes viejos (sin d.stock): se siguen viendo como se generaron.
   const seg = d.segmento;
   if (!seg) return null;
   const visitas = d.numeros.visitas_total;

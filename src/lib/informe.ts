@@ -35,6 +35,7 @@ export interface DatosInforme {
     actual: number | null;
     moneda: "ARS" | "USD";
     cambios_periodo: { fecha: string; precio_anterior: number; precio_nuevo: number }[];
+    /** Fecha AAAA-MM-DD desde la que no se toca el precio (informes nuevos), o la frase de los informes viejos. */
     sin_cambios_desde: string | null;
   };
   numeros: { visitas_total: number; consultas_total: number; conversion: number | null };
@@ -42,6 +43,8 @@ export interface DatosInforme {
   serie: DiaInforme[];
   origen: { fuente: string; visitas: number }[];
   segmento: { banda: string; n: number; p25: number; mediana: number; p75: number; posicion: string } | null;
+  /** Puesto entre TODO el stock publicado (informes nuevos). Los viejos traen sólo `segmento`. */
+  stock: { n: number; puesto: number; visitas_tipicas: number } | null;
   youtube: { views_acumuladas: number; views_periodo: number | null } | null;
   portales: string[];
 }
@@ -113,6 +116,12 @@ export function leerDatos(v: unknown): { datos: DatosInforme } | { falta: string
         }
       : null;
 
+  const st = esObj(v.stock) ? v.stock : null;
+  const stock =
+    st && num(st.n) !== undefined && num(st.puesto) !== undefined && num(st.visitas_tipicas) !== undefined
+      ? { n: st.n as number, puesto: st.puesto as number, visitas_tipicas: st.visitas_tipicas as number }
+      : null;
+
   const yt = esObj(v.youtube) ? v.youtube : null;
   const youtube =
     yt && num(yt.views_acumuladas) !== undefined
@@ -148,6 +157,7 @@ export function leerDatos(v: unknown): { datos: DatosInforme } | { falta: string
     serie,
     origen,
     segmento,
+    stock,
     youtube,
     portales: (Array.isArray(v.portales) ? v.portales : [])
       .map((p) => (esObj(p) ? texto(p.nombre, 60) : undefined))
