@@ -28,11 +28,14 @@ export async function getAutosParaSitemap(): Promise<AutoParaSitemap[]> {
 }
 
 export async function getDestacados(limite = 8): Promise<AutoCatalogo[]> {
+  // Los impulsados (excepción manual de dirección) entran a Destacados y van
+  // primero; después, el orden de siempre.
   const { data: destacados } = await supabase
     .from(TABLA)
     .select("*")
     .neq("estado", "senado")
-    .eq("destacado_web", true)
+    .or("destacado_web.eq.true,impulsado.eq.true")
+    .order("impulsado", { ascending: false })
     .order("fecha_ingreso", { ascending: false })
     .limit(limite);
 
@@ -148,8 +151,11 @@ export async function getAutosPaginados(filtros: Filtros): Promise<ResultadoCata
         .order("fecha_ingreso", { ascending: false });
       break;
     default:
-      // Por defecto: lo último que se subió primero.
-      query = query.order("fecha_ingreso", { ascending: false });
+      // Por defecto: los impulsados (excepción manual de dirección) primero y,
+      // después, lo último que se subió primero.
+      query = query
+        .order("impulsado", { ascending: false })
+        .order("fecha_ingreso", { ascending: false });
   }
 
   // Desempate estable: sin esto, autos con el mismo precio/fecha pueden

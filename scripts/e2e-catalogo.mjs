@@ -16,10 +16,10 @@
 // También cubre (regla 15-oct: proxy, /autos, caché/ISR/revalidate o links de
 // WhatsApp no van a main sin este test completo):
 //  - home, ficha, /autos y /usados/hasta-15-millones cargan y TODOS sus links de
-//    venta van al número que corresponde: pauta + "(ref: W1)" con las cookies
+//    venta van al número que corresponde: pauta + "(ref: V5)" con las cookies
 //    de pauta, portales sin ref sin cookies o en modo equipo.
 //  - llegada por anuncio (?utm_medium=paid&utm_content=<ID de Meta>) sin
-//    cookies previas: el proxy las pone y el link sale con pauta + W1. Sólo en
+//    cookies previas: el proxy las pone y el link sale con pauta + V5. Sólo en
 //    Chromium: las cookies del proxy son Secure y WebKit no las guarda por
 //    http://localhost (en WebKit lo cubren las cookies puestas a mano).
 //  - POST /api/revalidate: 401 sin secreto o con uno incorrecto; con el
@@ -35,13 +35,13 @@ import { chromium, devices, webkit } from "playwright-core";
 const BASE = process.env.BASE ?? "http://localhost:3011";
 const PAUTA = "5493515303712";
 const PORTALES = process.env.NEXT_PUBLIC_WHATSAPP ?? "5493513283316";
-const ANUNCIO_W1 = "120251049306750443"; // public.anuncios_ref -> W1
+const ANUNCIO = "120251367706090443"; // public.anuncios_ref -> V5 (activo; W1 se pausó el 22-oct)
 
 const ESCENARIOS = {
   "sin cookies": [],
   "pauta (tc_origen + tc_anuncio)": [
     { name: "tc_origen", value: "pauta" },
-    { name: "tc_anuncio", value: ANUNCIO_W1 },
+    { name: "tc_anuncio", value: ANUNCIO },
     { name: "tc_pauta_js", value: "1" },
   ],
   "equipo (tc_equipo)": [{ name: "tc_equipo", value: "1" }],
@@ -127,7 +127,7 @@ for (const [nombreNav, nav] of Object.entries(NAVEGADORES)) {
 // Venta esperada por escenario: número y ref del mensaje.
 const VENTA = {
   "sin cookies": { numero: PORTALES, ref: null },
-  "pauta (tc_origen + tc_anuncio)": { numero: PAUTA, ref: "W1" },
+  "pauta (tc_origen + tc_anuncio)": { numero: PAUTA, ref: "V5" },
   "equipo (tc_equipo)": { numero: PORTALES, ref: null },
 };
 
@@ -140,7 +140,7 @@ async function linksVenta(page) {
   // HTML estático (portales) o el replaceState tardío del router le cortaba el
   // goto siguiente ("interrupted by another navigation", 15 y 16-oct).
   await page.waitForFunction(() => window.__TITUS_HIDRATO === true, null, { timeout: 15_000 });
-  await page.waitForLoadState("networkidle"); // /api/anuncios-ref (W1)
+  await page.waitForLoadState("networkidle"); // /api/anuncios-ref (V5)
   await page.waitForTimeout(300);
   const hrefs = await page.$$eval('a[href*="wa.me/"]', (as) => as.map((a) => a.href));
   return hrefs
@@ -172,6 +172,21 @@ async function unaFicha() {
 }
 
 const PAGINAS = ["/", "/autos", "/usados/hasta-15-millones"];
+
+test("/autos: los impulsados salen primero en el orden por defecto", async (t) => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return t.skip("sin NEXT_PUBLIC_SUPABASE_URL/ANON_KEY en el entorno del test");
+  const res = await fetch(`${url}/rest/v1/catalogo_publico?select=slug&impulsado=eq.true&estado=neq.senado`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  assert.equal(res.status, 200, "consulta de impulsados");
+  const impulsados = new Set((await res.json()).map((a) => `/autos/${a.slug}`));
+  if (impulsados.size === 0) return t.skip("no hay autos impulsados en la vista");
+  const html = await (await fetch(`${BASE}/autos`)).text();
+  const slugs = [...new Set([...html.matchAll(/href="(\/autos\/[^"?#]+)"/g)].map((m) => m[1]))];
+  const primeros = slugs.slice(0, impulsados.size);
+  assert.deepEqual(new Set(primeros), impulsados, `primeros de /autos: ${primeros.join(", ")}`);
+});
 
 for (const [nombreNav, nav] of Object.entries(NAVEGADORES)) {
   for (const [nombre, cookies] of Object.entries(ESCENARIOS)) {
@@ -209,11 +224,11 @@ test("llegada por anuncio (utm_medium=paid + ID de Meta) — compu (Chromium)", 
     await ctx.route("**/api/track", (r) => r.fulfill({ status: 204 }));
     const page = await ctx.newPage();
     // Entra por la ficha (lo típico de un anuncio) y después recorre el sitio.
-    await page.goto(`${BASE}${ficha}?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO_W1}`);
-    verificarVenta(await linksVenta(page), { numero: PAUTA, ref: "W1" }, `${ficha} (llegada)`);
+    await page.goto(`${BASE}${ficha}?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO}`);
+    verificarVenta(await linksVenta(page), { numero: PAUTA, ref: "V5" }, `${ficha} (llegada)`);
     for (const ruta of PAGINAS) {
       await page.goto(`${BASE}${ruta}`);
-      verificarVenta(await linksVenta(page), { numero: PAUTA, ref: "W1" }, `${ruta} (después de la llegada)`);
+      verificarVenta(await linksVenta(page), { numero: PAUTA, ref: "V5" }, `${ruta} (después de la llegada)`);
     }
   } finally {
     await browser.close();
@@ -325,14 +340,14 @@ test("proxy: bloqueo de bots (tanda 46)", async () => {
 });
 
 test("proxy: cookies de pauta en la llegada por anuncio", async () => {
-  const r = await fetch(`${BASE}/?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO_W1}&utm_campaign=prueba`, {
+  const r = await fetch(`${BASE}/?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO}&utm_campaign=prueba`, {
     redirect: "manual",
   });
   assert.equal(r.status, 200);
   const cookies = r.headers.getSetCookie();
   const de = (nombre) => cookies.find((c) => c.startsWith(`${nombre}=`)) ?? "";
   assert.match(de("tc_origen"), /^tc_origen=pauta;/, "tc_origen=pauta");
-  assert.match(de("tc_anuncio"), new RegExp(`^tc_anuncio=${ANUNCIO_W1};`), "tc_anuncio = ID del anuncio");
+  assert.match(de("tc_anuncio"), new RegExp(`^tc_anuncio=${ANUNCIO};`), "tc_anuncio = ID del anuncio");
   assert.match(de("tc_campana"), /^tc_campana=prueba;/, "tc_campana");
   for (const n of ["tc_origen", "tc_anuncio", "tc_campana"]) {
     assert.doesNotMatch(de(n), /HttpOnly/i, `${n} tiene que ser legible desde JS`);
@@ -363,7 +378,7 @@ test("informe: token inválido o inexistente, sin marco, sin caché ni cookies, 
   const NO_ENCONTRADO = "No encontramos este informe.";
   for (const ruta of ["/informe/no-es-un-token", `/informe/${"0".repeat(36)}`]) {
     // Con utm de pauta: igual no tiene que poner ninguna cookie.
-    const r = await fetch(`${BASE}${ruta}?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO_W1}`, {
+    const r = await fetch(`${BASE}${ruta}?utm_source=ig&utm_medium=paid&utm_content=${ANUNCIO}`, {
       redirect: "manual",
     });
     assert.equal(r.status, 200, `${ruta}: status`);

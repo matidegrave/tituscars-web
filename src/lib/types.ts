@@ -54,6 +54,8 @@ export interface AutoCatalogo {
   precio_bajo_en: string | null;
   estado: Estado;
   destacado_web: boolean;
+  /** Excepción manual de dirección: el auto sale primero en el catálogo y el home. */
+  impulsado: boolean;
   descripcion_items: DescripcionItem[] | null;
   descripcion_extra: string | null;
   /** Texto de publicación armado en el legajo de gestión (ver lib/descripcion.ts). */
