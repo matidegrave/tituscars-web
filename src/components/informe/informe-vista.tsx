@@ -30,7 +30,9 @@ function precio(valor: number, moneda: "ARS" | "USD"): string {
 
 /** Días entre dos fechas AAAA-MM-DD (sin Date local: UTC puro). */
 const diasEntre = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
-const FECHA_ISO = /^d{4}-d{2}-d{2}$/;
+// Con las barras: sin ellas (6865b5f) no reconocía ninguna fecha y el dueño leía «Sin cambios de
+// precio 2026-10-03» en vez de «Precio sin cambios hace N días».
+const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 const POSICION: Record<string, string> = {
   "cuarto superior": "Está entre los que más se ven de su rango.",
@@ -76,7 +78,10 @@ function Cabecera({ d }: { d: DatosInforme }) {
             Precio actual <b>{precio(d.precio.actual, d.precio.moneda)}</b>
           </span>
         )}
-        {sinCambiosDias !== null ? (
+        {sinCambiosDias === 0 ? (
+          // El mismo día del informe: «hace 0 días» no se lee bien.
+          <span>Precio sin cambios desde el {ddmm(d.precio.sin_cambios_desde!)}</span>
+        ) : sinCambiosDias !== null ? (
           <span>
             Precio sin cambios hace <b>{entero.format(sinCambiosDias)} {sinCambiosDias === 1 ? "día" : "días"}</b>
           </span>
