@@ -23,17 +23,17 @@ export function marcarBusquedaPendiente(q: string, pagina?: string) {
  * convirtió en filtros ("camioneta diesel") o la que no dio nada también
  * quedan medidas con su texto original.
  */
-export function TrackBusqueda({ resultados }: { resultados: number }) {
+export function TrackBusqueda({ resultados, categoria }: { resultados: number; categoria?: string }) {
   useEffect(() => {
     try {
       const guardada = sessionStorage.getItem(CLAVE_BUSQUEDA_PENDIENTE);
       if (!guardada) return;
       sessionStorage.removeItem(CLAVE_BUSQUEDA_PENDIENTE);
       const { q, t, pagina } = JSON.parse(guardada) as { q: string; t: number; pagina?: string };
-      if (q && Date.now() - t < 60_000) track("busqueda", { q, resultados, pagina });
+      if (q && Date.now() - t < 60_000) track("busqueda", { q, resultados, pagina, categoria });
     } catch {
       // nunca rompe la página
     }
-  }, [resultados]);
+  }, [resultados, categoria]);
   return null;
 }

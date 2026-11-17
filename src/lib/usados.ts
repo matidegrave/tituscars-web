@@ -133,6 +133,9 @@ export function coincide(
   p: PaginaUsados,
 ): boolean {
   if (a.condicion !== "usado") return false;
+  // Las motos tienen su sección (/motos): no cuentan en las páginas /usados,
+  // que listan el catálogo de autos (WEB-MOTOS1).
+  if (a.carroceria === "moto") return false;
   switch (p.tipo) {
     case "marca":
       return slugMarca(a.marca) === p.slug;

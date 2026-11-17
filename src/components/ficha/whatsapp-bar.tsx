@@ -57,7 +57,7 @@ export function WhatsappCta({
   /** Consultas con intención (disponible / financiar / permuta), al WhatsApp de ventas. */
   intenciones: { texto: string; mensaje: string; detalle: string }[];
   /** Datos del auto para el click_whatsapp / Lead (los lee MetaPixel del link). */
-  trackAuto: { auto_id: string; slug: string; valor: number };
+  trackAuto: { auto_id: string; slug: string; valor: number; categoria?: string };
   /** Datos para guardarlo en favoritos (corazón al lado de compartir). */
   favorito: Omit<Favorito, "ts">;
   /** "Copiar para cliente" (sólo se ve en modo equipo). */
@@ -82,6 +82,8 @@ export function WhatsappCta({
     "data-track-auto-id": trackAuto.auto_id,
     "data-track-slug": trackAuto.slug,
     "data-track-valor": String(trackAuto.valor),
+    // content_category del Lead ("moto" en las motos, WEB-MOTOS1).
+    ...(trackAuto.categoria ? { "data-track-categoria": trackAuto.categoria } : {}),
   };
 
   return (

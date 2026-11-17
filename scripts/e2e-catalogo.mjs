@@ -171,7 +171,7 @@ async function unaFicha() {
   return slug;
 }
 
-const PAGINAS = ["/", "/autos", "/usados/hasta-15-millones"];
+const PAGINAS = ["/", "/autos", "/motos", "/usados/hasta-15-millones"];
 
 test("/autos: los impulsados salen primero en el orden por defecto", async (t) => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -337,6 +337,8 @@ test("proxy: bloqueo de bots (tanda 46)", async () => {
   assert.equal(await pedir("/", META), 200, "bot en la home: abierta");
   assert.equal(await pedir("/autos?q=focus", GOOGLE), 200, "Googlebot no se bloquea");
   assert.equal(await pedir("/autos?q=focus", PERSONA), 200, "una persona no se bloquea");
+  assert.equal(await pedir("/motos?cc=300-599", META), 403, "bot en /motos con filtros: 403");
+  assert.equal(await pedir("/motos", META), 200, "bot en /motos sin query: abierto");
 });
 
 test("proxy: cookies de pauta en la llegada por anuncio", async () => {
@@ -723,5 +725,148 @@ test("informe preview: abierta suelta, a los 10 s muestra el error", async () =>
     );
   } finally {
     await navegador.close();
+  }
+});
+
+// ─── /motos (WEB-MOTOS1) ─────────────────────────────────────────────────────
+// Las motos salen de /autos y viven en /motos, con filtro de cilindrada. Las
+// motos esperadas salen de la vista (catalogo_publico, carroceria = 'moto').
+
+async function motosDeLaVista(t) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    t.skip("sin NEXT_PUBLIC_SUPABASE_URL/ANON_KEY en el entorno del test");
+    return null;
+  }
+  const res = await fetch(
+    `${url}/rest/v1/catalogo_publico?select=slug,marca,modelo,anio,cilindrada&carroceria=eq.moto&estado=neq.senado`,
+    { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+  );
+  assert.equal(res.status, 200, "consulta de motos");
+  const motos = await res.json();
+  if (motos.length === 0) {
+    t.skip("no hay motos en la vista");
+    return null;
+  }
+  return motos;
+}
+
+const slugsDe = (html) => new Set([...html.matchAll(/href="\/autos\/([^"?#]+)"/g)].map((m) => m[1]));
+
+test("/motos: lista las motos con su cilindrada y /autos no las muestra", async (t) => {
+  const motos = await motosDeLaVista(t);
+  if (!motos) return;
+  const r = await fetch(`${BASE}/motos`);
+  assert.equal(r.status, 200, "/motos: 200");
+  const html = await r.text();
+  assert.match(html, /<title>Motos usadas en Córdoba \| Titus Cars<\/title>/, "title de /motos");
+  assert.match(html, /<link rel="canonical" href="https:\/\/tituscars\.com\/motos"/, "canónico /motos");
+  const enMotos = slugsDe(html);
+  for (const m of motos) {
+    assert.ok(enMotos.has(m.slug), `/motos no lista ${m.slug}`);
+    if (m.cilindrada) assert.ok(html.includes(`${m.cilindrada} cc`), `/motos no muestra "${m.cilindrada} cc"`);
+  }
+  for (const s of enMotos) assert.ok(motos.some((x) => x.slug === s), `/motos lista algo que no es moto: ${s}`);
+
+  // /autos (y filtrando por la marca de una moto): ninguna moto.
+  for (const ruta of ["/autos", ...motos.map((m) => `/autos?marca=${encodeURIComponent(m.marca)}`)]) {
+    const enAutos = slugsDe(await (await fetch(`${BASE}${ruta}`)).text());
+    for (const m of motos) assert.ok(!enAutos.has(m.slug), `${ruta} muestra la moto ${m.slug}`);
+  }
+});
+
+test("/motos: el filtro de cilindrada recorta por rango", async (t) => {
+  const motos = await motosDeLaVista(t);
+  if (!motos) return;
+  const RANGOS = { "hasta-150": [0, 150], "151-299": [151, 299], "300-599": [300, 599], "600-mas": [600, 1e9] };
+  for (const [cc, [min, max]] of Object.entries(RANGOS)) {
+    const slugs = slugsDe(await (await fetch(`${BASE}/motos?cc=${cc}`)).text());
+    for (const m of motos) {
+      const entra = m.cilindrada != null && m.cilindrada >= min && m.cilindrada <= max;
+      assert.equal(slugs.has(m.slug), entra, `/motos?cc=${cc}: ${m.slug} (${m.cilindrada} cc) ${entra ? "falta" : "sobra"}`);
+    }
+  }
+});
+
+test("/motos: redirecciones (/moto, carroceria=moto, buscar 'moto')", async () => {
+  const destino = async (ruta) => {
+    const r = await fetch(`${BASE}${ruta}`, { redirect: "manual" });
+    const u = new URL(r.headers.get("location") ?? "/", BASE);
+    return { status: r.status, location: `${u.pathname}${u.search}` };
+  };
+  assert.deepEqual(await destino("/moto"), { status: 308, location: "/motos" }, "/moto vieja -> /motos");
+  const c = await destino("/autos?carroceria=moto&condicion=usado");
+  assert.ok([307, 308].includes(c.status), `/autos?carroceria=moto: status ${c.status}`);
+  assert.equal(c.location, "/motos?condicion=usado", "/autos?carroceria=moto -> /motos con el resto");
+  const q = await destino("/autos?q=moto");
+  assert.ok([307, 308].includes(q.status), `/autos?q=moto: status ${q.status}`);
+  assert.equal(q.location, "/motos", "buscar 'moto' -> /motos");
+});
+
+test("/motos: ficha de moto con cilindrada y WhatsApp «me interesa la moto»", async (t) => {
+  const motos = await motosDeLaVista(t);
+  if (!motos) return;
+  const m = motos[0];
+  const browser = await chromium.launch();
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+    await ctx.route("**/api/track", (r) => r.fulfill({ status: 204 }));
+    const page = await ctx.newPage();
+    const res = await page.goto(`${BASE}/autos/${m.slug}`);
+    assert.equal(res?.status(), 200);
+    const links = await linksVenta(page);
+    const texto = await page.locator("main").innerText();
+    if (m.cilindrada) assert.ok(texto.includes(`${m.cilindrada} cc`), "la ficha no muestra la cilindrada");
+    assert.doesNotMatch(texto, /Transmisión|Combustible/, "la ficha de una moto no lleva combustible ni transmisión");
+    const consulta = links.find((l) => l.texto.startsWith("Hola, me interesa la moto"));
+    assert.ok(consulta, `sin «me interesa la moto»: ${links.map((l) => l.texto.slice(0, 50)).join(" | ")}`);
+    assert.ok(
+      consulta.texto.startsWith(`Hola, me interesa la moto ${m.marca} ${m.modelo} ${m.anio}`),
+      `mensaje: "${consulta.texto}"`
+    );
+    verificarVenta(links, VENTA["sin cookies"], `/autos/${m.slug}`);
+    // Pixel: los links de la ficha llevan content_category = moto.
+    assert.ok(await page.locator('a[href*="wa.me/"][data-track-categoria="moto"]').count(), "sin data-track-categoria=moto");
+  } finally {
+    await browser.close();
+  }
+});
+
+test("/motos: el filtro de cilindrada navega sin recargar, y a 360 px no hay scroll horizontal", async (t) => {
+  const motos = await motosDeLaVista(t);
+  if (!motos) return;
+  const browser = await chromium.launch();
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+    await ctx.route("**/api/track", (r) => r.fulfill({ status: 204 }));
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/motos`);
+    await page.waitForLoadState("networkidle");
+    // Sin carrocería, combustible ni transmisión en el panel de motos.
+    const panel = await page.locator("aside").innerText();
+    assert.doesNotMatch(panel, /Carrocería|Combustible|Transmisión/, "filtros que no van en /motos");
+    assert.match(panel, /Cilindrada/, "falta el filtro de cilindrada");
+    await page.locator("aside summary", { hasText: "Cilindrada" }).click();
+    await page.locator('aside a[href*="cc=300-599"]').click();
+    await page.waitForURL((u) => u.search.includes("cc=300-599"), { timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(500);
+    const enPagina = slugsDe(await page.content());
+    for (const m of motos) {
+      const entra = m.cilindrada >= 300 && m.cilindrada <= 599;
+      assert.equal(enPagina.has(m.slug), entra, `cc=300-599 sin recargar: ${m.slug} ${entra ? "falta" : "sobra"}`);
+    }
+
+    const celu = await browser.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
+    await celu.route("**/api/track", (r) => r.fulfill({ status: 204 }));
+    const p360 = await celu.newPage();
+    for (const ruta of ["/motos", "/", `/autos/${motos[0].slug}`]) {
+      await p360.goto(`${BASE}${ruta}`);
+      await p360.waitForLoadState("networkidle");
+      const ancho = await p360.evaluate(() => document.documentElement.scrollWidth);
+      assert.ok(ancho <= 360, `${ruta} a 360 px: scrollWidth ${ancho}`);
+    }
+  } finally {
+    await browser.close();
   }
 });

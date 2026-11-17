@@ -35,6 +35,8 @@ export interface AutoCatalogo {
   combustible: Combustible | null;
   transmision: Transmision;
   carroceria: Carroceria;
+  /** Cilindrada en cc (motos; en los autos suele venir null). */
+  cilindrada: number | null;
   condicion: Condicion;
   moneda: Moneda;
   precio: number;

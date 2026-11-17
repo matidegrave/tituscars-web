@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getAutoPorSlug, getResumenStock, getSimilares, getSlugActualPorSufijo } from "@/lib/autos";
 import type { AutoCatalogo } from "@/lib/types";
-import { bajaDePrecio, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
+import { bajaDePrecio, esMoto, formatCc, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
 import { FichaGallery } from "@/components/ficha/gallery";
 import { coloresDeFotos, conColores } from "@/lib/color-foto";
 import { datosParaCliente } from "@/lib/para-cliente";
@@ -16,10 +16,10 @@ import { CarruselTarjetas } from "@/components/carrusel-tarjetas";
 import { JsonLd } from "@/components/json-ld";
 import { jsonLdAuto } from "@/lib/json-ld";
 import { TrackVistaAuto } from "@/components/tracking/track-vista-auto";
-import { CalendarDays, Car, Fuel, Gauge, Settings2 } from "lucide-react";
+import { Bike, CalendarDays, Car, Fuel, Gauge, Settings2 } from "lucide-react";
 import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 import { DIRECCION_CALLE, SITE_URL } from "@/lib/config";
-import { mensajeConsultaAuto } from "@/lib/whatsapp";
+import { mensajeConsultaAuto, mensajeConsultaMoto } from "@/lib/whatsapp";
 
 // ISR: la ficha se arma una vez y se sirve del caché de Vercel. Cuando cambia
 // un auto (precio, estado, fotos…) gestión avisa a /api/revalidate y se
@@ -62,10 +62,11 @@ export async function generateMetadata({
   if (!auto) return {};
 
   const titulo = `${tituloAuto(auto)} ${auto.anio}`;
+  // Moto: "2023 · 6.000 km · 400 cc · $ 7.700.000" (WEB-MOTOS1).
   const descripcion = [
     String(auto.anio),
     formatKm(auto.km),
-    auto.combustible,
+    esMoto(auto) ? formatCc(auto.cilindrada) : auto.combustible,
     formatPrecio(auto.precio, auto.moneda),
   ]
     .filter(Boolean)
@@ -108,6 +109,14 @@ export default async function FichaAutoPage({
 
   const colores = await coloresDeFotos(fotos.map((f) => f.url));
 
+  // Moto (WEB-MOTOS1): datos sin combustible ni transmisión, textos de moto,
+  // mensaje de WhatsApp propio y content_category = 'moto' en el Pixel.
+  const moto = esMoto(auto);
+  const categoria = moto ? "moto" : undefined;
+  const vehiculo = moto ? "la moto" : "el";
+  const cc = formatCc(auto.cilindrada);
+  const otros = moto ? "Otras motos que te pueden interesar" : "Otros autos que te pueden interesar";
+
   const jsonLd = jsonLdAuto(auto);
 
   return (
@@ -119,6 +128,7 @@ export default async function FichaAutoPage({
           slug: auto.slug,
           valor: auto.precio_ars,
           ...(auto.precio_anterior !== null && { con_baja: true }),
+          ...(categoria && { categoria }),
         }}
       />
 
@@ -158,19 +168,25 @@ export default async function FichaAutoPage({
                   {formatKm(auto.km)}
                 </li>
               )}
-              {auto.combustible && (
+              {moto && cc && (
+                <li className="flex items-center gap-1.5">
+                  <Bike className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {cc}
+                </li>
+              )}
+              {auto.combustible && !moto && (
                 <li className="flex items-center gap-1.5">
                   <Fuel className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   {auto.combustible}
                 </li>
               )}
-              {auto.transmision && (
+              {auto.transmision && !moto && (
                 <li className="flex items-center gap-1.5">
                   <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   {auto.transmision === "manual" ? "Manual" : "Automática"}
                 </li>
               )}
-              {auto.carroceria && (
+              {auto.carroceria && !moto && (
                 <li className="flex items-center gap-1.5">
                   <Car className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   {auto.carroceria === "suv" ? "SUV" : auto.carroceria.charAt(0).toUpperCase() + auto.carroceria.slice(1)}
@@ -180,18 +196,18 @@ export default async function FichaAutoPage({
             <p className="mt-2 text-sm text-muted-foreground">
               {auto.disponibilidad === "salon"
                 ? `Disponible en nuestro salón, ${DIRECCION_CALLE}`
-                : "Este auto se ve con cita previa, escribinos para coordinar"}
+                : `${moto ? "Esta moto" : "Este auto"} se ve con cita previa, escribinos para coordinar`}
             </p>
             {auto.estado === "senado" && (
               <p className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-brand-black px-2.5 py-1 text-sm font-medium text-white">
-                Este auto está señado. Consultanos por unidades similares.
+                {moto ? "Esta moto está señada" : "Este auto está señado"}. Consultanos por unidades similares.
               </p>
             )}
           </div>
 
           <WhatsappCta
             titulo={titulo}
-            trackAuto={{ auto_id: auto.id, slug: auto.slug, valor: auto.precio_ars }}
+            trackAuto={{ auto_id: auto.id, slug: auto.slug, valor: auto.precio_ars, categoria }}
             precioFormateado={precioFormateado}
             favorito={{
               id: auto.id,
@@ -210,30 +226,44 @@ export default async function FichaAutoPage({
             }}
             intenciones={[
               {
-                texto: "Tengo un auto para entregar",
+                texto: moto ? "Tengo algo para entregar" : "Tengo un auto para entregar",
                 detalle: "permuta",
-                mensaje: `Hola, me interesa el ${titulo} ${auto.anio} y tengo un auto para entregar: ${urlFicha}`,
+                mensaje: moto
+                  ? `Hola, me interesa la moto ${auto.marca} ${auto.modelo} ${auto.anio} y tengo algo para entregar: ${urlFicha}`
+                  : `Hola, me interesa el ${titulo} ${auto.anio} y tengo un auto para entregar: ${urlFicha}`,
               },
               {
                 texto: "Quiero financiarlo",
                 detalle: "financiar",
-                mensaje: `Hola, me interesa financiar el ${titulo} ${auto.anio} (${precioFormateado}). ¿Qué opciones tengo? ${urlFicha}`,
+                mensaje: `Hola, me interesa financiar ${vehiculo} ${titulo} ${auto.anio} (${precioFormateado}). ¿Qué opciones tengo? ${urlFicha}`,
               },
               {
                 texto: "¡Me interesa!",
                 detalle: "interesa",
-                mensaje: `Hola, me interesa el ${titulo} ${auto.anio} (${precioFormateado}). ${urlFicha}`,
+                mensaje: moto
+                  ? `Hola, me interesa la moto ${auto.marca} ${auto.modelo} ${auto.anio} (${precioFormateado}). ${urlFicha}`
+                  : `Hola, me interesa el ${titulo} ${auto.anio} (${precioFormateado}). ${urlFicha}`,
               },
             ]}
-            mensajeWhatsapp={mensajeConsultaAuto({
-              titulo,
-              anio: auto.anio,
-              datos: [formatKm(auto.km), auto.combustible, precioFormateado]
-                .filter(Boolean)
-                .join(" · "),
-              url: urlFicha,
-              conCita: auto.disponibilidad === "cita",
-            })}
+            mensajeWhatsapp={
+              moto
+                ? mensajeConsultaMoto({
+                    marca: auto.marca,
+                    modelo: auto.modelo,
+                    anio: auto.anio,
+                    url: urlFicha,
+                    conCita: auto.disponibilidad === "cita",
+                  })
+                : mensajeConsultaAuto({
+                    titulo,
+                    anio: auto.anio,
+                    datos: [formatKm(auto.km), auto.combustible, precioFormateado]
+                      .filter(Boolean)
+                      .join(" · "),
+                    url: urlFicha,
+                    conCita: auto.disponibilidad === "cita",
+                  })
+            }
           />
 
           <FichaTecnica auto={auto} />
@@ -254,10 +284,10 @@ export default async function FichaAutoPage({
       {similares.length > 0 && (
         // Separador claro: lo de abajo ya no es este auto.
         <div className="mt-14 border-t-[3px] border-brand pt-10">
-          <h2 className="text-lg font-bold">Otros autos que te pueden interesar</h2>
+          <h2 className="text-lg font-bold">{otros}</h2>
           <div className="mt-4">
             {/* Celu: carrusel (asoma el siguiente, flechas). Desde sm: la grilla. */}
-            <CarruselTarjetas etiqueta="Otros autos que te pueden interesar" grillaDesdeSm>
+            <CarruselTarjetas etiqueta={otros} grillaDesdeSm>
               {similares.map((a) => (
                 <AutoCard key={a.id} auto={a} />
               ))}

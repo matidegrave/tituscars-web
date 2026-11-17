@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { REVALIDAR_STOCK_S, TAG_STOCK, supabaseStock as supabase } from "@/lib/supabase";
 import type { AutoCatalogo } from "@/lib/types";
-import { POR_PAGINA, type Filtros } from "@/lib/filtros";
+import { CILINDRADA_RANGOS, POR_PAGINA, type Filtros, type Seccion } from "@/lib/filtros";
 import { filtroBusqueda } from "@/lib/busqueda";
 import type { FacetRow } from "@/lib/facets";
 
@@ -11,8 +11,23 @@ const TABLA = "catalogo_publico";
 // Los señados no se muestran en la web (ni catálogo, ni home, ni ficha, ni
 // sitemap): cada consulta a la vista los excluye con .neq("estado", "senado").
 
-export async function getTotalEnStock(): Promise<number> {
-  const { count } = await supabase.from(TABLA).select("*", { count: "exact", head: true }).neq("estado", "senado");
+// Autos y motos (WEB-MOTOS1): /autos y los carruseles de autos de la home
+// muestran todo menos carroceria = 'moto' (la carrocería vacía cuenta como
+// auto); /motos y el bloque Motos de la home, sólo esas. Las fichas
+// (/autos/:slug), el sitemap y los favoritos no distinguen.
+const SIN_MOTOS = "carroceria.is.null,carroceria.neq.moto";
+
+/** La consulta, recortada a la sección (autos: sin motos; motos: sólo motos). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ver conFiltros
+function deSeccion<Q extends { or: any; eq: any }>(query: Q, seccion: Seccion | undefined): Q {
+  return seccion === "motos" ? query.eq("carroceria", "moto") : query.or(SIN_MOTOS);
+}
+
+export async function getTotalEnStock(seccion?: Seccion): Promise<number> {
+  const { count } = await deSeccion(
+    supabase.from(TABLA).select("*", { count: "exact", head: true }).neq("estado", "senado"),
+    seccion
+  );
   return count ?? 0;
 }
 
@@ -30,10 +45,7 @@ export async function getAutosParaSitemap(): Promise<AutoParaSitemap[]> {
 export async function getDestacados(limite = 8): Promise<AutoCatalogo[]> {
   // Los impulsados (excepción manual de dirección) entran a Destacados y van
   // primero; después, el orden de siempre.
-  const { data: destacados } = await supabase
-    .from(TABLA)
-    .select("*")
-    .neq("estado", "senado")
+  const { data: destacados } = await deSeccion(supabase.from(TABLA).select("*").neq("estado", "senado"), "autos")
     .or("destacado_web.eq.true,impulsado.eq.true")
     .order("impulsado", { ascending: false })
     .order("fecha_ingreso", { ascending: false })
@@ -43,29 +55,24 @@ export async function getDestacados(limite = 8): Promise<AutoCatalogo[]> {
     return destacados;
   }
 
-  const { data: recientes } = await supabase
-    .from(TABLA)
-    .select("*")
-    .neq("estado", "senado")
+  const { data: recientes } = await deSeccion(supabase.from(TABLA).select("*").neq("estado", "senado"), "autos")
     .order("fecha_ingreso", { ascending: false })
     .limit(limite);
 
   return recientes ?? [];
 }
 
-export async function getUltimosIngresos(limite = 12): Promise<AutoCatalogo[]> {
-  const { data } = await supabase
-    .from(TABLA)
-    .select("*")
-    .neq("estado", "senado")
+/** Lo último que ingresó de la sección (por defecto, autos: sin motos). */
+export async function getUltimosIngresos(limite = 12, seccion?: Seccion): Promise<AutoCatalogo[]> {
+  const { data } = await deSeccion(supabase.from(TABLA).select("*").neq("estado", "senado"), seccion)
     .order("fecha_ingreso", { ascending: false })
     .limit(limite);
 
   return data ?? [];
 }
 
-export async function getAnios(): Promise<number[]> {
-  const { data } = await supabase.from(TABLA).select("anio").neq("estado", "senado");
+export async function getAnios(seccion?: Seccion): Promise<number[]> {
+  const { data } = await deSeccion(supabase.from(TABLA).select("anio").neq("estado", "senado"), seccion);
   const set = new Set((data ?? []).map((r) => r.anio as number));
   return Array.from(set).sort((a, b) => b - a);
 }
@@ -97,6 +104,12 @@ function conFiltros<Q extends { or: any; in: any; gte: any; lte: any; eq: any; n
   if (filtros.carroceria.length > 0) query = query.in("carroceria", filtros.carroceria);
   if (filtros.condicion) query = query.eq("condicion", filtros.condicion);
   if (filtros.baja) query = query.not("precio_anterior", "is", null);
+  // Sección: /autos sin motos, /motos sólo motos. Este segundo or= se suma con
+  // AND al de la búsqueda (PostgREST acepta el parámetro repetido).
+  query = deSeccion(query, filtros.seccion);
+  const cc = filtros.seccion === "motos" ? CILINDRADA_RANGOS.find((r) => r.value === filtros.cc) : undefined;
+  if (cc?.min) query = query.gte("cilindrada", cc.min);
+  if (cc?.max) query = query.lte("cilindrada", cc.max);
   return query;
 }
 
@@ -184,20 +197,18 @@ export function compararPorBaja(a: AutoCatalogo, b: AutoCatalogo): number {
   return (b.fecha_ingreso ?? "").localeCompare(a.fecha_ingreso ?? "");
 }
 
-/** Autos con baja de precio reciente, la baja más reciente primero (home, tanda 47). */
+/** Autos (sin motos) con baja de precio reciente, la baja más reciente primero (home, tanda 47). */
 export async function getAutosConBaja(limite = 8): Promise<AutoCatalogo[]> {
-  const { data } = await supabase
-    .from(TABLA)
-    .select("*")
-    .neq("estado", "senado")
+  const { data } = await deSeccion(supabase.from(TABLA).select("*").neq("estado", "senado"), "autos")
     .not("precio_anterior", "is", null);
   return [...((data ?? []) as AutoCatalogo[])].sort(compararPorBaja).slice(0, limite);
 }
 
-export async function getFacetsBase(): Promise<FacetRow[]> {
-  const { data } = await supabase
-    .from(TABLA)
-    .select("marca, modelo, combustible, transmision, carroceria").neq("estado", "senado");
+export async function getFacetsBase(seccion?: Seccion): Promise<FacetRow[]> {
+  const { data } = await deSeccion(
+    supabase.from(TABLA).select("marca, modelo, combustible, transmision, carroceria").neq("estado", "senado"),
+    seccion
+  );
 
   return data ?? [];
 }
@@ -286,11 +297,11 @@ export async function getSimilares(
 ): Promise<AutoCatalogo[]> {
   const resultado: AutoCatalogo[] = [];
   const idsUsados = new Set<string>([auto.id]);
+  // Una moto ofrece motos; un auto, autos (nunca se mezclan).
+  const seccion: Seccion = auto.carroceria === "moto" ? "motos" : "autos";
+  const base = () => deSeccion(supabase.from(TABLA).select("*").neq("estado", "senado"), seccion);
 
-  const { data: porMarca } = await supabase
-    .from(TABLA)
-    .select("*")
-    .neq("estado", "senado")
+  const { data: porMarca } = await base()
     .eq("marca", auto.marca)
     .neq("id", auto.id)
     .order("fecha_ingreso", { ascending: false })
@@ -301,11 +312,8 @@ export async function getSimilares(
     idsUsados.add(item.id);
   }
 
-  if (resultado.length < limite && auto.carroceria) {
-    const { data: porCarroceria } = await supabase
-      .from(TABLA)
-      .select("*")
-      .neq("estado", "senado")
+  if (resultado.length < limite && auto.carroceria && seccion === "autos") {
+    const { data: porCarroceria } = await base()
       .eq("carroceria", auto.carroceria)
       .neq("id", auto.id)
       .order("fecha_ingreso", { ascending: false })
@@ -320,10 +328,7 @@ export async function getSimilares(
   }
 
   if (resultado.length < limite) {
-    const { data: recientes } = await supabase
-      .from(TABLA)
-      .select("*")
-      .neq("estado", "senado")
+    const { data: recientes } = await base()
       .neq("id", auto.id)
       .order("fecha_ingreso", { ascending: false })
       .limit(limite + idsUsados.size);

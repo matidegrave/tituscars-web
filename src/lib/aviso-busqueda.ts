@@ -132,11 +132,14 @@ function unico(valores: string[], mapa: Record<string, string>): string | null {
 export function prellenadoDesdeFiltros(f: Filtros, extra?: { textoBuscado?: string }): Prellenado {
   const marcas = f.marca;
   const texto = [f.modelo.join(" "), f.q ?? ""].filter(Boolean).join(" ");
-  const modelo = texto
+  const modeloBase = texto
     ? modeloDesdeTexto(texto, marcas)
     : marcas.length > 0
       ? marcas.map(nombrePropio).join(" / ")
       : extra?.textoBuscado ?? "";
+  // Desde /motos (WEB-MOTOS1) el pedido aclara que es una moto.
+  const modelo =
+    f.seccion === "motos" && !/\bmoto/i.test(modeloBase) ? `Moto ${modeloBase}`.trim() : modeloBase;
   const params = filtrosAParams({ ...f, q: undefined, orden: "recientes", page: 1 }).toString();
   return {
     datos: {

@@ -3,17 +3,18 @@ import { SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BusquedaAMedida } from "@/components/busqueda-a-medida";
 import type { Prellenado } from "@/lib/aviso-busqueda";
+import { nombreVehiculo, rutaCatalogo, type Filtros } from "@/lib/filtros";
 
 /** Filtros sin resultados: "Te lo buscamos" prellenado con los filtros (tanda 49). */
-export function EstadoVacio({ prellenado }: { prellenado: Prellenado }) {
+export function EstadoVacio({ prellenado, filtros }: { prellenado: Prellenado; filtros: Filtros }) {
   return (
     <div className="flex flex-col items-center py-16 text-center">
       <SearchX className="h-10 w-10 text-muted-foreground" />
-      <p className="mt-4 text-base font-medium">No encontramos autos con esos filtros</p>
+      <p className="mt-4 text-base font-medium">No encontramos {nombreVehiculo(filtros)} con esos filtros</p>
       <Button
         variant="outline"
         className="mt-4"
-        render={<Link href="/autos" />}
+        render={<Link href={rutaCatalogo(filtros)} />}
         nativeButton={false}
       >
         Limpiar filtros

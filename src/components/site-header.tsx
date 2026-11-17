@@ -14,7 +14,9 @@ import { BuscadorHeader } from "@/components/buscador-header";
 
 const NAV_LINKS = [
   { href: "/", label: "Inicio" },
-  { href: "/autos", label: "Catálogo" },
+  // WEB-MOTOS1: el catálogo se parte en Autos y Motos.
+  { href: "/autos", label: "Autos" },
+  { href: "/motos", label: "Motos" },
   { href: "/consigna", label: "Consigná tu auto" },
   { href: "/financiacion", label: "Financiación" },
   { href: "/nosotros", label: "Conocenos" },

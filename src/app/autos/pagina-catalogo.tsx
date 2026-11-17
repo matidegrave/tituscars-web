@@ -16,6 +16,7 @@ import { JsonLd } from "@/components/json-ld";
 import { jsonLdListaAutos } from "@/lib/json-ld";
 import { redirect } from "next/navigation";
 import {
+  contarAutos,
   getAnios,
   getAutosPaginados,
   getFacetsBase,
@@ -41,21 +42,44 @@ import {
   urlCatalogo,
   type Filtros,
   type SearchParamsCatalogo,
+  type Seccion,
 } from "@/lib/filtros";
 
+/** Los mismos filtros en /motos: sin los que no aplican a una moto. */
+function aMotos(f: Filtros): Filtros {
+  return { ...f, seccion: "motos", carroceria: [], combustible: [], transmision: [] };
+}
+
 /**
- * El catálogo con los filtros de `sp`, para /autos
+ * El catálogo con los filtros de `sp`, para /autos o /motos (WEB-MOTOS1)
  * (página dinámica: lee los filtros de searchParams).
  */
-export async function PaginaCatalogo({ sp }: { sp: SearchParamsCatalogo }) {
+export async function PaginaCatalogo({ sp, seccion }: { sp: SearchParamsCatalogo; seccion?: Seccion }) {
   // Scroll infinito: siempre arranca en la primera tanda (un ?page= viejo se ignora).
-  const filtros = { ...parseFiltros(sp), page: 1 };
+  const filtros = { ...parseFiltros(sp, seccion), page: 1 };
+  const motos = filtros.seccion === "motos";
+
+  // Las motos viven en /motos: /autos?carroceria=moto (links viejos, la
+  // sugerencia de antes) va ahí con el resto de los filtros.
+  if (!motos && filtros.carroceria.includes("moto")) redirect(urlCatalogo(aMotos(filtros)));
 
   // Palabras de la búsqueda que son filtros ("camioneta diesel", "hilux
   // automatica"): se aplican como filtros y se busca el resto como texto.
   // Redirección en el servidor: anda igual sin JS.
   if (filtros.q) {
     const { filtros: f, resto, hayFiltros } = interpretarBusqueda(filtros.q);
+    // "moto benelli" (o cualquier búsqueda con palabras-filtro en /motos):
+    // a /motos con el resto como texto; carrocería, caja y combustible no
+    // aplican a una moto.
+    if (hayFiltros && (motos || f.carroceria.includes("moto"))) {
+      redirect(
+        urlCatalogo({
+          ...aMotos(filtros),
+          q: resto || undefined,
+          condicion: f.condicion ?? filtros.condicion,
+        })
+      );
+    }
     if (hayFiltros) {
       const unir = (a: string[], b: string[]) => [...a, ...b.filter((v) => !a.includes(v))];
       redirect(
@@ -74,20 +98,25 @@ export async function PaginaCatalogo({ sp }: { sp: SearchParamsCatalogo }) {
   const claveFiltros = filtrosAParams(filtros).toString();
 
   const [facetRows, anios, resultado] = await Promise.all([
-    getFacetsBase(),
-    getAnios(),
+    getFacetsBase(filtros.seccion),
+    getAnios(filtros.seccion),
     getAutosPaginados(filtros).then(async (r) => ({ ...r, autos: await conColores(r.autos) })),
   ]);
 
   const { marcas, hayTransmision, hayCarroceria } = calcularFacets(facetRows);
   const { autos, total } = resultado;
-  const sugerencias = listaSugerencias(marcas);
+  const sugerencias = listaSugerencias(marcas, filtros.seccion);
 
   // Búsqueda sin resultados: "¿Quisiste decir…?" y autos parecidos.
   let sinResultados: {
     sugerencia: { texto: string; href: string } | null;
     parecidos: AutoCatalogo[];
   } | null = null;
+  // Buscó una moto desde /autos ("benelli"): si en /motos hay, la lleva ahí.
+  if (total === 0 && filtros.q && !motos && (await contarAutos(aMotos(filtros))) > 0) {
+    redirect(urlCatalogo(aMotos(filtros)));
+  }
+
   if (total === 0 && filtros.q) {
     // Candidatos: marcas y modelos en stock. El modelo a veces trae la versión
     // entera ("T-Cross Trendline 1.6 Msi"): también cuentan su primera palabra
@@ -110,14 +139,14 @@ export async function PaginaCatalogo({ sp }: { sp: SearchParamsCatalogo }) {
     const correccion = sugerirCorreccion(filtros.q, candidatos);
     const compacto = normalizar(filtros.q).replace(/ /g, "");
     const marca = marcas.find((m) => compacto.includes(normalizar(m.marca).replace(/ /g, "")));
-    const carroceria = carroceriaParecida(filtros.q);
+    const carroceria = motos ? null : carroceriaParecida(filtros.q);
     const buscarParecidos = (f: Partial<Filtros>) =>
-      getAutosPaginados({ ...filtrosVacios(), ...f }).then((r) => conColores(r.autos.slice(0, 8)));
+      getAutosPaginados({ ...filtrosVacios(filtros.seccion), ...f }).then((r) => conColores(r.autos.slice(0, 8)));
     const parecidos = marca
       ? await buscarParecidos({ marca: [marca.marca] })
       : carroceria
         ? await buscarParecidos({ carroceria: [carroceria] })
-        : await getUltimosIngresos(8).then(conColores);
+        : await getUltimosIngresos(8, filtros.seccion).then(conColores);
     sinResultados = {
       sugerencia: correccion
         ? { texto: correccion.texto, href: urlCatalogo({ ...filtros, q: correccion.texto }) }
@@ -129,9 +158,9 @@ export async function PaginaCatalogo({ sp }: { sp: SearchParamsCatalogo }) {
   return (
     // Fondo gris para que las tarjetas blancas se despeguen.
     <div className="bg-zinc-100">
-      <TrackAlMontar tipo="vista_catalogo" />
+      <TrackAlMontar tipo="vista_catalogo" datos={motos ? { categoria: "moto" } : undefined} />
       {/* Una por URL (key): registra la búsqueda recién enviada con su total. */}
-      <TrackBusqueda key={claveFiltros} resultados={total} />
+      <TrackBusqueda key={claveFiltros} resultados={total} categoria={motos ? "moto" : undefined} />
       <JsonLd data={jsonLdListaAutos(autos)} />
       <div className="mx-auto w-full max-w-[1600px] px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
@@ -148,7 +177,7 @@ export async function PaginaCatalogo({ sp }: { sp: SearchParamsCatalogo }) {
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[1fr_auto_1fr]">
-              <h1 className="text-2xl font-bold tracking-tight">Catálogo</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{motos ? "Motos" : "Catálogo"}</h1>
               <CondicionTabs filtros={filtros} />
               <div className="hidden lg:block lg:justify-self-end">
                 <OrdenSelect filtros={filtros} />
@@ -200,7 +229,7 @@ export async function PaginaCatalogo({ sp }: { sp: SearchParamsCatalogo }) {
                   claveFiltros={claveFiltros}
                 />
               ) : (
-                <EstadoVacio prellenado={prellenadoDesdeFiltros(filtros)} />
+                <EstadoVacio prellenado={prellenadoDesdeFiltros(filtros)} filtros={filtros} />
               )}
             </div>
           </div>

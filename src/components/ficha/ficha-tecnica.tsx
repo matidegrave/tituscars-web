@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { BadgeCheck, Calendar, Gauge, Fuel, Cog, Car } from "lucide-react";
-import { formatKm } from "@/lib/format";
+import { BadgeCheck, Calendar, Gauge, Fuel, Cog, Car, Bike } from "lucide-react";
+import { esMoto, formatCc, formatKm } from "@/lib/format";
 import type { AutoCatalogo } from "@/lib/types";
 
 function capitalizar(texto: string): string {
@@ -17,7 +17,14 @@ export function FichaTecnica({ auto }: { auto: AutoCatalogo }) {
     filas.push({ icono: <Gauge className="h-5 w-5" />, etiqueta: "Kilómetros", valor: km });
   }
 
-  if (auto.combustible) {
+  // Moto (WEB-MOTOS1): año, km, cilindrada y condición.
+  const moto = esMoto(auto);
+  const cc = formatCc(auto.cilindrada);
+  if (moto && cc) {
+    filas.push({ icono: <Bike className="h-5 w-5" />, etiqueta: "Cilindrada", valor: cc });
+  }
+
+  if (auto.combustible && !moto) {
     filas.push({
       icono: <Fuel className="h-5 w-5" />,
       etiqueta: "Combustible",
@@ -25,7 +32,7 @@ export function FichaTecnica({ auto }: { auto: AutoCatalogo }) {
     });
   }
 
-  if (auto.transmision) {
+  if (auto.transmision && !moto) {
     filas.push({
       icono: <Cog className="h-5 w-5" />,
       etiqueta: "Transmisión",
@@ -33,7 +40,7 @@ export function FichaTecnica({ auto }: { auto: AutoCatalogo }) {
     });
   }
 
-  if (auto.carroceria) {
+  if (auto.carroceria && !moto) {
     filas.push({
       icono: <Car className="h-5 w-5" />,
       etiqueta: "Carrocería",

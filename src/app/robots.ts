@@ -23,7 +23,8 @@ export default function robots(): MetadataRoute.Robots {
       // /informe/ NO va acá: el robot de previsualización de WhatsApp respeta
       // robots.txt y sin poder leer la página no arma el Open Graph; además un
       // Disallow impide leer el noindex. Lo saca de Google su meta noindex.
-      disallow: "/autos?",
+      // /motos con query, lo mismo (WEB-MOTOS1).
+      disallow: ["/autos?", "/motos?"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
