@@ -2,6 +2,7 @@ import { FiltrosPanel } from "@/components/catalogo/filtros-panel";
 import { FiltrosDrawer } from "@/components/catalogo/filtros-drawer";
 import { FiltrosActivos } from "@/components/catalogo/filtros-activos";
 import { CondicionTabs } from "@/components/catalogo/condicion-tabs";
+import { SeccionTabs, utmDe } from "@/components/catalogo/seccion-tabs";
 import { OrdenSelect } from "@/components/catalogo/orden-select";
 import { BarraCatalogoCelu } from "@/components/catalogo/barra-catalogo-celu";
 import { CatalogoInfinito } from "@/components/catalogo/catalogo-infinito";
@@ -178,7 +179,16 @@ export async function PaginaCatalogo({ sp, seccion }: { sp: SearchParamsCatalogo
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[1fr_auto_1fr]">
               <h1 className="text-2xl font-bold tracking-tight">{motos ? "Motos" : "Catálogo"}</h1>
-              <CondicionTabs filtros={filtros} />
+              {/* Autos | Motos y Todos | Usados | 0 KM (WEB-MOTOS3): en el celu
+                  cada selector en su fila, en la compu uno al lado del otro. */}
+              <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center">
+                <SeccionTabs
+                  seccion={motos ? "motos" : "autos"}
+                  condicion={filtros.condicion}
+                  utm={utmDe(sp)}
+                />
+                <CondicionTabs filtros={filtros} />
+              </div>
               <div className="hidden lg:block lg:justify-self-end">
                 <OrdenSelect filtros={filtros} />
               </div>

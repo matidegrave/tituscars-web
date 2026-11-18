@@ -1,8 +1,7 @@
 import { conColores } from "@/lib/color-foto";
 import type { Metadata } from "next";
 import { Hero } from "@/components/hero";
-import { BuscadorCatalogo } from "@/components/catalogo/buscador-catalogo";
-import { filtrosVacios } from "@/lib/filtros";
+import { BuscadorHome } from "@/components/buscador-home";
 import { calcularFacets } from "@/lib/facets";
 import { listaSugerencias } from "@/lib/sugerencias";
 import { FeaturedCarousel } from "@/components/featured-carousel";
@@ -39,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [destacados, ultimosIngresos, totalEnStock, conBaja, facetRows, motos, totalMotos] = await Promise.all([
+  const [destacados, ultimosIngresos, totalEnStock, conBaja, facetRows, motos, totalMotos, facetRowsMotos] = await Promise.all([
     getDestacados(8).then(conColores),
     getUltimosIngresos(12).then(conColores),
     getTotalEnStock(),
@@ -48,6 +47,8 @@ export default async function HomePage() {
     // Bloque Motos (WEB-MOTOS1): la vista ya trae sólo las activas con fotos.
     getUltimosIngresos(8, "motos").then(conColores),
     getTotalEnStock("motos"),
+    // Sugerencias del buscador en «Motos» (WEB-MOTOS3).
+    getFacetsBase("motos"),
   ]);
 
   const jsonLd = jsonLdConcesionaria();
@@ -57,12 +58,15 @@ export default async function HomePage() {
       <JsonLd data={jsonLd} />
       <Hero />
 
-      {/* Celu: el buscador a la vista, sin bajar. */}
+      {/* Celu: el buscador a la vista, sin bajar, con Autos | Motos arriba
+          (WEB-MOTOS3; sólo si hay motos en stock). */}
       <section className="bg-white px-4 pb-4 pt-4 lg:hidden">
-        <BuscadorCatalogo
-          filtros={filtrosVacios()}
-          id="buscador-home"
-          sugerencias={listaSugerencias(calcularFacets(facetRows).marcas)}
+        <BuscadorHome
+          conMotos={totalMotos > 0}
+          sugerencias={{
+            autos: listaSugerencias(calcularFacets(facetRows).marcas),
+            motos: listaSugerencias(calcularFacets(facetRowsMotos).marcas, "motos"),
+          }}
         />
       </section>
 
