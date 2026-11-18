@@ -7,7 +7,7 @@ import { Heart, Loader2 } from "lucide-react";
 import { AutoCard } from "@/components/auto-card";
 import { WhatsappIcon } from "@/components/icons/whatsapp-icon";
 import { leerFavoritos, quitarFavorito, suscribirFavoritos, type Favorito } from "@/lib/favoritos";
-import { formatPrecio, tituloAuto } from "@/lib/format";
+import { formatPrecio, rutaFicha, tituloAuto } from "@/lib/format";
 import { linkVenta } from "@/lib/whatsapp";
 import { useVenta } from "@/components/linea-whatsapp";
 import { SITE_URL } from "@/lib/config";
@@ -27,7 +27,7 @@ export function mensajeFavoritos(autos: AutoCatalogo[]): string {
   const lista = autos
     .map(
       (a, i) =>
-        `${i + 1}) ${tituloAuto(a)} ${a.anio} ${formatPrecio(a.precio, a.moneda)} ${SITE_URL}/autos/${a.slug}`
+        `${i + 1}) ${tituloAuto(a)} ${a.anio} ${formatPrecio(a.precio, a.moneda)} ${SITE_URL}${rutaFicha(a)}`
     )
     .join("\n");
   return `Hola, me interesan estos autos:\n${lista}`;

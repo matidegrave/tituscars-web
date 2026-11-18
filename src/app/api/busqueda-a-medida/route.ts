@@ -30,13 +30,17 @@ function numeroOpcional(v: unknown, min: number, max: number): number | null | u
   return Number.isFinite(n) && n >= min && n <= max ? n : undefined;
 }
 
-const ORIGENES = new Set(["sin_resultados", "pie_ficha", "pie_autos"]);
+const ORIGENES = new Set(["sin_resultados", "pie_ficha", "pie_autos", "pie_motos"]);
 const CLAVES_TEXTO: Record<string, number> = {
   presupuesto: 10,
   combustible: 20,
   transmision: 20,
   carroceria: 20,
   detalle: 200,
+  // Pedido de moto (WEB-MOTOS2).
+  tipo: 10,
+  marca: 60,
+  cilindrada: 20,
   q: 100,
   filtros_activos: 500,
 };

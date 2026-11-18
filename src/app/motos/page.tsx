@@ -6,7 +6,7 @@ import { PaginaCatalogo } from "@/app/autos/pagina-catalogo";
 // /motos (WEB-MOTOS1): el mismo catálogo que /autos, recortado a
 // carroceria = 'moto', con sus propios filtros (cilindrada; sin carrocería,
 // combustible ni transmisión). DINÁMICA por lo mismo que /autos (ver
-// app/autos/page.tsx). Las fichas siguen en /autos/:slug.
+// app/autos/page.tsx). Las fichas de moto van en /motos/:slug (WEB-MOTOS2).
 
 const TITULO = "Motos usadas en Córdoba | Titus Cars";
 const DESCRIPCION =

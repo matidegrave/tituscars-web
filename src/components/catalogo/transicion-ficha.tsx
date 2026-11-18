@@ -78,6 +78,7 @@ export function TransicionFicha() {
     if (!conexionRapida() || typeof IntersectionObserver === "undefined") return;
     const hechas = new Map<string, number>();
     const cola: string[] = [];
+    const rutas = new Map<string, string>();
     const lanzadas: number[] = [];
     let total = 0;
     let bomba = 0;
@@ -95,7 +96,9 @@ export function TransicionFicha() {
         total++;
         // "full": la ficha es dinámica y sin loading.js; la precarga por
         // defecto no traería nada.
-        router.prefetch(`/autos/${slug}`, { kind: "full" } as unknown as Parameters<typeof router.prefetch>[1]);
+        // La ruta sale del link de la card: /autos/… o /motos/… (WEB-MOTOS2).
+        const href = rutas.get(slug) ?? `/autos/${slug}`;
+        router.prefetch(href, { kind: "full" } as unknown as Parameters<typeof router.prefetch>[1]);
       }
       if (cola.length && total < MAX_POR_PAGINA) bomba = window.setTimeout(bombear, 500);
     }
@@ -104,6 +107,8 @@ export function TransicionFicha() {
       for (const en of entradas) {
         const slug = (en.target as HTMLElement).dataset.card;
         if (!slug) continue;
+        const href = (en.target as HTMLElement).getAttribute("href");
+        if (href) rutas.set(slug, href);
         const i = cola.indexOf(slug);
         if (en.isIntersecting && i < 0) cola.push(slug);
         else if (!en.isIntersecting && i >= 0) cola.splice(i, 1);

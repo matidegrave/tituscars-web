@@ -10,13 +10,15 @@ import { useVenta } from "@/components/linea-whatsapp";
 import { formatMiles } from "@/lib/format";
 import {
   CARROCERIAS,
+  CILINDRADAS,
   COMBUSTIBLES,
-  PRESUPUESTOS,
   TRANSMISIONES,
   VACIO,
   aniosElegibles,
   construirMensaje,
   cuerpoBusqueda,
+  presupuestosDe,
+  queBusca,
   type DatosAviso,
   type Origen,
   type Prellenado,
@@ -78,7 +80,8 @@ export function FormBusqueda({
     });
   }
 
-  const valido = datos.modelo.trim().length >= 2;
+  // Moto (WEB-MOTOS2): marca y modelo van en dos campos; alcanza con uno.
+  const valido = queBusca(datos).length >= 2;
   const venta = useVenta();
   const link = linkVenta(venta, valido ? construirMensaje(datos) : "");
 
@@ -149,17 +152,37 @@ export function FormBusqueda({
           <input id={`${id}-web`} name="web" tabIndex={-1} autoComplete="off" value={trampa} onChange={(e) => setTrampa(e.target.value)} />
         </div>
 
+        {datos.moto && (
+          <div>
+            <Label htmlFor={`${id}-marca`} className="mb-1.5">
+              Marca
+            </Label>
+            <Input
+              id={`${id}-marca`}
+              maxLength={60}
+              autoComplete="off"
+              placeholder="Ej: Honda"
+              value={datos.marca}
+              onChange={(e) => {
+                set("marca", e.target.value);
+                if (faltaModelo) setFaltaModelo(false);
+              }}
+              className="h-11 bg-background text-base"
+            />
+          </div>
+        )}
+
         <div>
           <Label htmlFor={`${id}-modelo`} className="mb-1.5">
-            Marca y modelo *
+            {datos.moto ? "Modelo" : "Marca y modelo *"}
           </Label>
           <Input
             id={`${id}-modelo`}
             ref={modeloInput}
-            required
+            required={!datos.moto}
             maxLength={120}
             autoComplete="off"
-            placeholder="Ej: Volkswagen Vento"
+            placeholder={datos.moto ? "Ej: XR 150" : "Ej: Volkswagen Vento"}
             value={datos.modelo}
             onChange={(e) => {
               set("modelo", e.target.value);
@@ -171,10 +194,20 @@ export function FormBusqueda({
           />
           {faltaModelo && (
             <p id={`${id}-modelo-ayuda`} className="mt-1 text-xs text-destructive">
-              Contanos qué auto buscás.
+              {datos.moto ? "Contanos qué moto buscás (marca o modelo)." : "Contanos qué auto buscás."}
             </p>
           )}
         </div>
+
+        {datos.moto && (
+          <Pregunta titulo="Cilindrada">
+            {CILINDRADAS.map((c) => (
+              <Pastilla key={c} activa={datos.cilindrada === c} onClick={() => alternar("cilindrada", c)}>
+                {c}
+              </Pastilla>
+            ))}
+          </Pregunta>
+        )}
 
         <fieldset>
           <legend className="mb-2 text-sm font-medium">Años</legend>
@@ -185,13 +218,16 @@ export function FormBusqueda({
         </fieldset>
 
         <Pregunta titulo="Presupuesto: hasta">
-          {PRESUPUESTOS.map((p) => (
+          {presupuestosDe(datos).map((p) => (
             <Pastilla key={p.valor} activa={datos.presupuesto === p.valor} onClick={() => alternar("presupuesto", p.valor)}>
               {p.label}
             </Pastilla>
           ))}
         </Pregunta>
 
+        {/* Moto: sólo marca, modelo, cilindrada, años y presupuesto. */}
+        {!datos.moto && (
+        <>
         <Pregunta titulo="Combustible">
           {COMBUSTIBLES.map((c) => (
             <Pastilla key={c} activa={datos.combustible === c} onClick={() => alternar("combustible", c)}>
@@ -301,6 +337,8 @@ export function FormBusqueda({
             className="h-11 bg-background text-base"
           />
         </div>
+        </>
+        )}
       </div>
 
       <div
@@ -361,7 +399,9 @@ export function BusquedaAMedida({
         ¿No encontraste el vehículo que buscás?
       </h2>
       <p className="mt-2 text-center text-muted-foreground md:text-left">
-        Te lo buscamos. Contanos qué auto querés y te avisamos cuando entre uno. Sin costo, sin compromiso.
+        {props.prellenado?.datos?.moto
+          ? "Te la buscamos. Contanos qué moto querés y te avisamos cuando entre una. Sin costo, sin compromiso."
+          : "Te lo buscamos. Contanos qué auto querés y te avisamos cuando entre uno. Sin costo, sin compromiso."}
       </p>
       <div className="mt-6">
         <FormBusqueda {...props} />

@@ -174,7 +174,7 @@ export function CatalogoInfinito({
       {/* Fin del scroll infinito: si no apareció lo que buscaba, lo pide a medida. */}
       {!hayMas && (
         <BusquedaAMedidaDiferida
-          origen="pie_autos"
+          origen={filtros.seccion === "motos" ? "pie_motos" : "pie_autos"}
           prellenado={prellenadoDesdeFiltros(filtros)}
           sobreGris
           className="mx-auto mt-10 max-w-3xl"

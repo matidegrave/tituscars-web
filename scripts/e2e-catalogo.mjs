@@ -751,7 +751,8 @@ async function motosDeLaVista(t) {
   return motos;
 }
 
-const slugsDe = (html) => new Set([...html.matchAll(/href="\/autos\/([^"?#]+)"/g)].map((m) => m[1]));
+// Fichas de autos (/autos/…) y de motos (/motos/…, WEB-MOTOS2).
+const slugsDe = (html) => new Set([...html.matchAll(/href="\/(?:autos|motos)\/([^"?#]+)"/g)].map((m) => m[1]));
 
 test("/motos: lista las motos con su cilindrada y /autos no las muestra", async (t) => {
   const motos = await motosDeLaVista(t);
@@ -812,8 +813,13 @@ test("/motos: ficha de moto con cilindrada y WhatsApp «me interesa la moto»", 
     const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
     await ctx.route("**/api/track", (r) => r.fulfill({ status: 204 }));
     const page = await ctx.newPage();
-    const res = await page.goto(`${BASE}/autos/${m.slug}`);
+    const res = await page.goto(`${BASE}/motos/${m.slug}`);
     assert.equal(res?.status(), 200);
+    assert.equal(
+      await page.locator('header nav a[aria-current="page"]').first().innerText(),
+      "Motos",
+      "el header no marca «Motos» en la ficha de una moto"
+    );
     const links = await linksVenta(page);
     const texto = await page.locator("main").innerText();
     if (m.cilindrada) assert.ok(texto.includes(`${m.cilindrada} cc`), "la ficha no muestra la cilindrada");
@@ -824,7 +830,8 @@ test("/motos: ficha de moto con cilindrada y WhatsApp «me interesa la moto»", 
       consulta.texto.startsWith(`Hola, me interesa la moto ${m.marca} ${m.modelo} ${m.anio}`),
       `mensaje: "${consulta.texto}"`
     );
-    verificarVenta(links, VENTA["sin cookies"], `/autos/${m.slug}`);
+    verificarVenta(links, VENTA["sin cookies"], `/motos/${m.slug}`);
+    assert.ok(consulta.texto.includes(`/motos/${m.slug}`), `el mensaje no lleva el link /motos/: "${consulta.texto}"`);
     // Pixel: los links de la ficha llevan content_category = moto.
     assert.ok(await page.locator('a[href*="wa.me/"][data-track-categoria="moto"]').count(), "sin data-track-categoria=moto");
   } finally {
@@ -860,12 +867,70 @@ test("/motos: el filtro de cilindrada navega sin recargar, y a 360 px no hay scr
     const celu = await browser.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
     await celu.route("**/api/track", (r) => r.fulfill({ status: 204 }));
     const p360 = await celu.newPage();
-    for (const ruta of ["/motos", "/", `/autos/${motos[0].slug}`]) {
+    for (const ruta of ["/motos", "/", `/motos/${motos[0].slug}`]) {
       await p360.goto(`${BASE}${ruta}`);
       await p360.waitForLoadState("networkidle");
       const ancho = await p360.evaluate(() => document.documentElement.scrollWidth);
       assert.ok(ancho <= 360, `${ruta} a 360 px: scrollWidth ${ancho}`);
     }
+  } finally {
+    await browser.close();
+  }
+});
+
+test("fichas de motos: 301 de /autos/<moto> a /motos/<moto> y de /motos/<auto> a /autos/<auto>", async (t) => {
+  const motos = await motosDeLaVista(t);
+  if (!motos) return;
+  const m = motos[0];
+  const r = await fetch(`${BASE}/autos/${m.slug}?utm_source=ig&utm_medium=paid`, { redirect: "manual" });
+  assert.equal(r.status, 301, `/autos/<moto>: status ${r.status}`);
+  const u = new URL(r.headers.get("location") ?? "/", BASE);
+  assert.equal(u.pathname, `/motos/${m.slug}`, "/autos/<moto> -> /motos/<moto>");
+  assert.equal(u.searchParams.get("utm_medium"), "paid", "el 301 conserva la query");
+
+  const auto = (await unaFicha()).replace(/^\/autos\//, "");
+  const a = await fetch(`${BASE}/motos/${auto}`, { redirect: "manual" });
+  assert.equal(a.status, 301, `/motos/<auto>: status ${a.status}`);
+  assert.equal(new URL(a.headers.get("location") ?? "/", BASE).pathname, `/autos/${auto}`, "/motos/<auto> -> /autos/<auto>");
+
+  const no = await fetch(`${BASE}/motos/no-existe-esta-moto-2001-zzzzzz`, { redirect: "manual" });
+  assert.equal(no.status, 404, "ficha de moto inexistente: 404");
+
+  // Las cards de /motos y el sitemap ya apuntan a /motos/<slug>.
+  const html = await (await fetch(`${BASE}/motos`)).text();
+  assert.ok(html.includes(`href="/motos/${m.slug}"`), "la card de /motos no lleva a /motos/<slug>");
+  const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
+  assert.ok(sitemap.includes(`/motos/${m.slug}<`), "el sitemap no tiene /motos/<slug>");
+  assert.ok(!sitemap.includes(`/autos/${m.slug}<`), "el sitemap todavía tiene /autos/<moto>");
+});
+
+test("«Te lo buscamos» en /motos: campos de moto y mensaje de moto", async (t) => {
+  const motos = await motosDeLaVista(t);
+  if (!motos) return;
+  const browser = await chromium.launch();
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+    await ctx.route("**/api/track", (r) => r.fulfill({ status: 204 }));
+    // No se guarda nada: el POST del formulario se contesta acá.
+    await ctx.route("**/api/busqueda-a-medida", (r) => r.fulfill({ status: 200, body: '{"ok":true}' }));
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/motos`);
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const form = page.locator("section", { hasText: "¿No encontraste el vehículo que buscás?" }).last();
+    await form.locator("legend", { hasText: "Cilindrada" }).waitFor({ timeout: 10_000 });
+    const texto = await form.innerText();
+    assert.match(texto, /qué moto querés/, "el texto no habla de motos");
+    assert.doesNotMatch(texto, /Combustible|Transmisión|carrocería|Entregás/, "campos de auto en el form de motos");
+    await form.getByLabel("Marca", { exact: true }).fill("Honda");
+    await form.getByLabel("Modelo", { exact: true }).fill("XR 150");
+    await form.getByRole("button", { name: "Hasta 150 cc" }).click();
+    await form.getByRole("button", { name: "$5M", exact: true }).click();
+    const href = await form.locator('a[href*="wa.me/"]').getAttribute("href");
+    const mensaje = new URL(href).searchParams.get("text") ?? "";
+    assert.match(mensaje, /^Hola, estoy buscando una moto Honda XR 150\./, `mensaje: "${mensaje}"`);
+    assert.match(mensaje, /Cilindrada: Hasta 150 cc/, `sin cilindrada: "${mensaje}"`);
+    assert.match(mensaje, /Presupuesto: hasta \$5M/, `sin presupuesto: "${mensaje}"`);
   } finally {
     await browser.close();
   }
