@@ -39,12 +39,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [destacados, ultimosIngresos, totalEnStock, conBaja, facetRows] = await Promise.all([
+  const [destacados, ultimosIngresos, totalEnStock, conBaja, facetRows, motos, totalMotos] = await Promise.all([
     getDestacados(8).then(conColores),
     getUltimosIngresos(12).then(conColores),
     getTotalEnStock(),
     getAutosConBaja(100),
     getFacetsBase(),
+    // Bloque Motos (WEB-MOTOS1): la vista ya trae sólo las activas con fotos.
+    getUltimosIngresos(8, "motos").then(conColores),
+    getTotalEnStock("motos"),
   ]);
 
   const jsonLd = jsonLdConcesionaria();
@@ -89,6 +92,26 @@ export default async function HomePage() {
                 detalle: `${conBaja.length} autos bajaron de precio`,
               }}
             />
+          </div>
+        </section>
+      )}
+
+      {motos.length > 0 && (
+        <section className="bg-zinc-100">
+          <div className="mx-auto max-w-6xl px-4 py-16">
+            <h2 className="text-center text-2xl font-bold tracking-tight md:text-left">Motos</h2>
+            <div className="mt-6">
+              <FeaturedCarousel
+                autos={motos}
+                etiqueta="Motos"
+                totalEnStock={totalMotos}
+                verMas={{
+                  href: "/motos",
+                  titulo: "Ver todas las motos",
+                  detalle: `${totalMotos} ${totalMotos === 1 ? "moto" : "motos"} en stock`,
+                }}
+              />
+            </div>
           </div>
         </section>
       )}

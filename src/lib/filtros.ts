@@ -14,6 +14,33 @@ export const PRECIO_PRESETS: { label: string; min?: number; max?: number }[] = [
   { label: "Más de $40M", min: 40_000_000, max: undefined },
 ];
 
+// Motos (WEB-MOTOS1): otra escala de precios (hoy el stock de motos va de $5M
+// a $8M); misma regla del "N - 1".
+export const PRECIO_PRESETS_MOTOS: { label: string; min?: number; max?: number }[] = [
+  { label: "Hasta $5M", min: undefined, max: 4_999_999 },
+  { label: "$5M a $8M", min: 5_000_000, max: 7_999_999 },
+  { label: "$8M a $12M", min: 8_000_000, max: 11_999_999 },
+  { label: "Más de $12M", min: 12_000_000, max: undefined },
+];
+
+/**
+ * Sección del catálogo (WEB-MOTOS1): /autos (todo menos motos) o /motos
+ * (carroceria = 'moto'). No viaja en la query: la pone la página.
+ */
+export type Seccion = "autos" | "motos";
+
+export function presetsPrecio(seccion?: Seccion) {
+  return seccion === "motos" ? PRECIO_PRESETS_MOTOS : PRECIO_PRESETS;
+}
+
+/** Rangos de cilindrada de /motos (?cc=), uno a la vez. */
+export const CILINDRADA_RANGOS: { value: string; label: string; min?: number; max?: number }[] = [
+  { value: "hasta-150", label: "Hasta 150 cc", max: 150 },
+  { value: "151-299", label: "151 a 299 cc", min: 151, max: 299 },
+  { value: "300-599", label: "300 a 599 cc", min: 300, max: 599 },
+  { value: "600-mas", label: "600 cc o más", min: 600 },
+];
+
 export const ORDEN_DEFECTO = "recientes";
 
 export const OPCIONES_ORDEN: { value: string; label: string }[] = [
@@ -39,6 +66,10 @@ export interface Filtros {
   transmision: string[];
   carroceria: string[];
   condicion?: Condicion;
+  /** Rango de cilindrada (CILINDRADA_RANGOS.value), sólo en /motos. */
+  cc?: string;
+  /** undefined = /autos. */
+  seccion?: Seccion;
   /** Sólo autos con baja de precio reciente (?baja=1). */
   baja?: boolean;
   orden: string;
@@ -71,10 +102,12 @@ function aMonto(v?: string | string[]): number | undefined {
   return digitos ? Number(digitos) : undefined;
 }
 
-export function parseFiltros(sp: SearchParamsCatalogo): Filtros {
+export function parseFiltros(sp: SearchParamsCatalogo, seccion?: Seccion): Filtros {
   // ?anio= viene del buscador de la home (un solo año) -> anio_min = anio_max
   const anioUnico = aNumero(sp.anio);
   const condicionRaw = Array.isArray(sp.condicion) ? sp.condicion[0] : sp.condicion;
+  const ccRaw = Array.isArray(sp.cc) ? sp.cc[0] : sp.cc;
+  const motos = seccion === "motos";
 
   return {
     q: (Array.isArray(sp.q) ? sp.q[0] : sp.q)?.trim() || undefined,
@@ -89,6 +122,8 @@ export function parseFiltros(sp: SearchParamsCatalogo): Filtros {
     transmision: aArray(sp.transmision),
     carroceria: aArray(sp.carroceria),
     condicion: condicionRaw === "usado" || condicionRaw === "0km" ? condicionRaw : undefined,
+    cc: motos && CILINDRADA_RANGOS.some((r) => r.value === ccRaw) ? ccRaw : undefined,
+    ...(motos ? { seccion } : {}),
     baja: (Array.isArray(sp.baja) ? sp.baja[0] : sp.baja) === "1" || undefined,
     orden: (Array.isArray(sp.orden) ? sp.orden[0] : sp.orden) || ORDEN_DEFECTO,
     page: Math.max(1, aNumero(sp.page) ?? 1),
@@ -110,6 +145,7 @@ export function filtrosAParams(f: Filtros): URLSearchParams {
   for (const t of f.transmision) p.append("transmision", t);
   for (const c of f.carroceria) p.append("carroceria", c);
   if (f.condicion) p.set("condicion", f.condicion);
+  if (f.cc) p.set("cc", f.cc);
   if (f.baja) p.set("baja", "1");
   if (f.orden && f.orden !== ORDEN_DEFECTO) p.set("orden", f.orden);
   if (f.page && f.page > 1) p.set("page", String(f.page));
@@ -123,12 +159,24 @@ export function filtrosAParams(f: Filtros): URLSearchParams {
  * los filtros navegaban a /autos pelado (bug de los filtros en Win7 / iOS 16).
  */
 export function urlCatalogo(f: Filtros): string {
+  const ruta = rutaCatalogo(f);
   const query = filtrosAParams({ ...f, page: 1 }).toString();
-  return query ? `/autos?${query}` : "/autos";
+  return query ? `${ruta}?${query}` : ruta;
+}
+
+/** /autos o /motos según la sección de los filtros. */
+export function rutaCatalogo(f: Pick<Filtros, "seccion">): "/autos" | "/motos" {
+  return f.seccion === "motos" ? "/motos" : "/autos";
+}
+
+/** "auto"/"autos" o "moto"/"motos", para los textos del catálogo. */
+export function nombreVehiculo(f: Pick<Filtros, "seccion">, cantidad = 2): string {
+  const motos = f.seccion === "motos";
+  return cantidad === 1 ? (motos ? "moto" : "auto") : motos ? "motos" : "autos";
 }
 
 /**
- * Campos ocultos para un <form method="get" action="/autos"> que cambia sólo
+ * Campos ocultos para un <form method="get" action="/autos" o "/motos"> que cambia sólo
  * algunos filtros: todos los demás parámetros actuales (sin JS no se pierden).
  */
 export function camposOcultos(f: Filtros, sin: string[]): [string, string][] {
@@ -137,8 +185,9 @@ export function camposOcultos(f: Filtros, sin: string[]): [string, string][] {
   return [...p.entries()];
 }
 
-export function filtrosVacios(): Filtros {
+export function filtrosVacios(seccion?: Seccion): Filtros {
   return {
+    ...(seccion === "motos" ? { seccion } : {}),
     marca: [],
     modelo: [],
     combustible: [],
@@ -161,6 +210,7 @@ export function contarFiltrosActivos(f: Filtros): number {
   n += f.transmision.length;
   n += f.carroceria.length;
   if (f.condicion) n += 1;
+  if (f.cc) n += 1;
   if (f.baja) n += 1;
   return n;
 }

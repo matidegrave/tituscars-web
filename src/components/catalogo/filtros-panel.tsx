@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { formatMiles, parseMiles } from "@/lib/format";
 import {
   camposOcultos,
+  CILINDRADA_RANGOS,
   ORDEN_DEFECTO,
-  PRECIO_PRESETS,
+  presetsPrecio,
+  rutaCatalogo,
   toggleEnArray,
   urlCatalogo,
   type Filtros,
@@ -35,6 +37,8 @@ const CARROCERIAS: { value: string; label: string }[] = [
   { value: "moto", label: "Moto" },
 ];
 const KM_OPCIONES = [50000, 100000, 150000, 200000];
+// Motos (WEB-MOTOS1): andan mucho menos.
+const KM_OPCIONES_MOTOS = [5000, 10000, 20000, 50000];
 
 const numeroDe = (datos: FormData, campo: string): number | undefined => {
   const v = datos.get(campo);
@@ -96,7 +100,12 @@ export function FiltrosPanel({
       (precioMin || precioMax) && filtros.orden === ORDEN_DEFECTO ? "precio_asc" : filtros.orden,
   });
 
-  const presetActivo = PRECIO_PRESETS.find(
+  // /motos (WEB-MOTOS1): sin carrocería, combustible ni transmisión; con
+  // cilindrada, y su propia escala de precio y km.
+  const motos = filtros.seccion === "motos";
+  const presets = presetsPrecio(filtros.seccion);
+  const accion = rutaCatalogo(filtros);
+  const presetActivo = presets.find(
     (p) => p.min === filtros.precioMin && p.max === filtros.precioMax
   );
 
@@ -122,7 +131,7 @@ export function FiltrosPanel({
             Bajaron de precio
           </OpcionLink>
           <div className="mt-1 flex flex-col gap-1">
-            {PRECIO_PRESETS.map((preset) => {
+            {presets.map((preset) => {
               const activo = presetActivo === preset;
               return (
                 <OpcionBoton
@@ -138,6 +147,7 @@ export function FiltrosPanel({
           <p className="mb-1.5 mt-4 text-xs text-muted-foreground">O elegí tu rango</p>
           {/* key: si el rango cambia desde afuera (chip, preset), los campos se rearman. */}
           <FormFiltro
+            action={accion}
             key={`${filtros.precioMin ?? ""}-${filtros.precioMax ?? ""}`}
             ocultos={[
               ...camposOcultos(filtros, ["precio_min", "precio_max", "orden"]),
@@ -171,7 +181,7 @@ export function FiltrosPanel({
           </FormFiltro>
         </Seccion>
 
-        {hayCarroceria && (
+        {hayCarroceria && !motos && (
           <Seccion titulo="Carrocería" activos={filtros.carroceria.length}>
             <div className="flex flex-col gap-1">
               {CARROCERIAS.map((c) => (
@@ -222,6 +232,7 @@ export function FiltrosPanel({
         {anios.length > 0 && (
           <Seccion titulo="Año" activos={filtros.anioMin || filtros.anioMax ? 1 : 0}>
             <FormFiltro
+              action={accion}
               key={`${filtros.anioMin ?? ""}-${filtros.anioMax ?? ""}`}
               ocultos={camposOcultos(filtros, ["anio_min", "anio_max", "anio"])}
               onAplicar={(datos) =>
@@ -266,6 +277,7 @@ export function FiltrosPanel({
 
         <Seccion titulo="Kilómetros" activos={filtros.kmMax ? 1 : 0}>
           <FormFiltro
+            action={accion}
             key={filtros.kmMax ?? ""}
             ocultos={camposOcultos(filtros, ["km_max"])}
             onAplicar={(datos) => ir({ ...filtros, kmMax: numeroDe(datos, "km_max") })}
@@ -277,7 +289,7 @@ export function FiltrosPanel({
               onChange={(e) => e.currentTarget.form?.requestSubmit()}
             >
               <option value="">Cualquiera</option>
-              {KM_OPCIONES.map((km) => (
+              {(motos ? KM_OPCIONES_MOTOS : KM_OPCIONES).map((km) => (
                 <option key={km} value={km}>
                   Hasta {formatMiles(km)} km
                 </option>
@@ -286,6 +298,26 @@ export function FiltrosPanel({
           </FormFiltro>
         </Seccion>
 
+        {motos && (
+          <Seccion titulo="Cilindrada" activos={filtros.cc ? 1 : 0}>
+            <div className="flex flex-col gap-1">
+              {CILINDRADA_RANGOS.map((r) => {
+                const activo = filtros.cc === r.value;
+                return (
+                  <OpcionBoton
+                    key={r.value}
+                    activo={activo}
+                    {...opcion({ ...filtros, cc: activo ? undefined : r.value })}
+                  >
+                    {r.label}
+                  </OpcionBoton>
+                );
+              })}
+            </div>
+          </Seccion>
+        )}
+
+        {!motos && (
         <Seccion titulo="Combustible" activos={filtros.combustible.length}>
           <div className="flex flex-col gap-1">
             {COMBUSTIBLES.map((c) => (
@@ -299,8 +331,9 @@ export function FiltrosPanel({
             ))}
           </div>
         </Seccion>
+        )}
 
-        {hayTransmision && (
+        {hayTransmision && !motos && (
           <Seccion titulo="Transmisión" activos={filtros.transmision.length}>
             <div className="flex flex-col gap-1">
               {TRANSMISIONES.map((t) => (

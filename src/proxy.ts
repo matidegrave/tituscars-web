@@ -74,7 +74,8 @@ const REDIRECCIONES: Regla[] = [
   ...aUsados(["camionetas", "camioneta", "pickups", "pickup", "pick-ups", "pick-up"], "camionetas"),
   ...aUsados(["suv", "suvs"], "suv"),
   ...aUsados(["utilitarios", "utilitario"], "utilitarios"),
-  ...categorias(["motos", "moto"], "carroceria=moto"),
+  // /motos ya es una página propia (WEB-MOTOS1); /moto (la vieja) va ahí.
+  { prefijo: "/moto", destino: "/motos", exacta: true },
   ...aUsados(["sedan", "sedanes", "hatchback", "hatchbacks"], "autos"),
   ...categorias(["usados", "autos-usados", "usado"], "condicion=usado"),
   ...categorias(["0-km", "autos-0km", "nuevos"], "condicion=0km"),
@@ -185,7 +186,7 @@ async function resolverFicha(request: NextRequest, slug: string): Promise<NextRe
 // (con extensión: robots.txt, sitemap.xml, /brand/logo.png, /reels/x.mp4…)
 // siempre pasan.
 const RUTAS_PROPIAS =
-  /^\/(?:$|autos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|favoritos$|informe\/[^/]+$|usados\/[a-z0-9]+(?:-[a-z0-9]+)*$|ficha-no-disponible$|ml-callback$|api\/|_next\/|_vercel\/|\.well-known\/)/;
+  /^\/(?:$|autos(?:\/[^/]+)?$|motos$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|favoritos$|informe\/[^/]+$|usados\/[a-z0-9]+(?:-[a-z0-9]+)*$|ficha-no-disponible$|ml-callback$|api\/|_next\/|_vercel\/|\.well-known\/)/;
 
 function esRutaPropia(pathname: string): boolean {
   return RUTAS_PROPIAS.test(pathname) || /\.[a-z0-9]+$/i.test(pathname);
@@ -269,7 +270,8 @@ function bloquearCrawler(request: NextRequest): Response | null {
 
   const { pathname, search } = request.nextUrl;
   if (pathname === "/api/track") return new Response(null, { status: 403 });
-  if (pathname === "/autos" && search.length > 1) {
+  // /motos con query es el mismo árbol de filtros (WEB-MOTOS1).
+  if ((pathname === "/autos" || pathname === "/motos") && search.length > 1) {
     const q = search.toLowerCase();
     if (QUERY_DE_ANUNCIO.some((p) => q.includes(p))) return null;
     return new Response(null, { status: 403 });

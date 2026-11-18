@@ -1,23 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { bajaDePrecio, formatKm, formatPrecio, tituloAuto } from "@/lib/format";
+import { bajaDePrecio, datosVehiculo, formatPrecio, tituloAuto } from "@/lib/format";
 import { PastillaDisponibilidad } from "@/components/pastilla-disponibilidad";
 import { ExtrasCard } from "@/components/vendedor/herramientas-card";
 import { datosParaCliente } from "@/lib/para-cliente";
 import type { AutoCatalogo } from "@/lib/types";
 
+/** "2020 · 45.000 km · Nafta · Manual"; moto "2023 · 6.000 km · 400 cc". */
 function lineaDatos(auto: AutoCatalogo): string {
-  const partes = [
-    String(auto.anio),
-    formatKm(auto.km),
-    auto.combustible,
-    auto.transmision === "manual"
-      ? "Manual"
-      : auto.transmision === "automatica"
-        ? "Automática"
-        : null,
-  ].filter(Boolean);
-  return partes.join(" · ");
+  return [String(auto.anio), ...datosVehiculo(auto)].join(" · ");
 }
 
 export function AutoCard({

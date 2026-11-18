@@ -7,7 +7,7 @@
  */
 
 import { SITE_URL } from "@/lib/config";
-import { formatKm } from "@/lib/format";
+import { datosVehiculo } from "@/lib/format";
 import type { AutoCatalogo } from "@/lib/types";
 
 /** Lo mínimo de un auto para armar el texto (viene armado desde el servidor). */
@@ -22,21 +22,11 @@ export interface AutoParaCliente {
   precio: string;
 }
 
-/** "45.000 km · Nafta · Automática" (sin el año: va en la primera línea). */
+/** "45.000 km · Nafta · Automática", moto "6.000 km · 400 cc" (sin el año: va en la primera línea). */
 export function datosParaCliente(
-  a: Pick<AutoCatalogo, "km" | "combustible" | "transmision">,
+  a: Pick<AutoCatalogo, "km" | "combustible" | "transmision" | "carroceria" | "cilindrada">,
 ): string {
-  return [
-    formatKm(a.km),
-    a.combustible,
-    a.transmision === "manual"
-      ? "Manual"
-      : a.transmision === "automatica"
-        ? "Automática"
-        : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  return datosVehiculo(a).join(" · ");
 }
 
 export const ENCABEZADO_POR_DEFECTO = "Te paso algunas opciones:";

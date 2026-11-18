@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { camposOcultos, OPCIONES_ORDEN, urlCatalogo, type Filtros } from "@/lib/filtros";
+import { camposOcultos, OPCIONES_ORDEN, rutaCatalogo, urlCatalogo, type Filtros } from "@/lib/filtros";
 import { FormFiltro, SelectNativo } from "@/components/catalogo/filtro-controles";
 
 /**
@@ -20,6 +20,7 @@ export function OrdenSelect({
   return (
     <FormFiltro
       key={filtros.orden}
+      action={rutaCatalogo(filtros)}
       ocultos={camposOcultos(filtros, ["orden"])}
       onAplicar={(datos) => router.push(urlCatalogo({ ...filtros, orden: String(datos.get("orden") ?? "") }))}
       className="w-full lg:w-fit"

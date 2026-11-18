@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
-import { camposOcultos, urlCatalogo, type Filtros } from "@/lib/filtros";
+import { camposOcultos, rutaCatalogo, urlCatalogo, type Filtros } from "@/lib/filtros";
 import { filtrarSugerencias, type Sugerencia } from "@/lib/busqueda";
 import { marcarBusquedaPendiente } from "@/components/catalogo/track-busqueda";
 import { cn } from "@/lib/utils";
@@ -116,7 +116,7 @@ export function BuscadorCatalogo({
   const ocultos = camposOcultos(filtros, ["q"]);
 
   return (
-    <form role="search" method="get" action="/autos" onSubmit={enviar} className={cn("relative flex", className)}>
+    <form role="search" method="get" action={rutaCatalogo(filtros)} onSubmit={enviar} className={cn("relative flex", className)}>
       {ocultos.map(([k, v], i) => (
         <input key={`${k}-${i}`} type="hidden" name={k} value={v} />
       ))}

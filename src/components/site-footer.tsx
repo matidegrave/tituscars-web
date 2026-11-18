@@ -37,7 +37,10 @@ export function SiteFooter() {
           </p>
           <nav className="mt-3 flex flex-col gap-2 text-sm text-white/70">
             <Link href="/autos" className="hover:text-brand">
-              Catálogo
+              Autos
+            </Link>
+            <Link href="/motos" className="hover:text-brand">
+              Motos
             </Link>
             <Link href="/consigna" className="hover:text-brand">
               Consigná tu auto

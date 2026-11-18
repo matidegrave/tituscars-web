@@ -12,7 +12,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { FiltrosPanel } from "@/components/catalogo/filtros-panel";
-import { contarFiltrosActivos, filtrosAParams, urlCatalogo, type Filtros } from "@/lib/filtros";
+import { contarFiltrosActivos, filtrosAParams, nombreVehiculo, urlCatalogo, type Filtros } from "@/lib/filtros";
 import type { FacetMarca } from "@/lib/facets";
 
 export function FiltrosDrawer({
@@ -56,7 +56,9 @@ export function FiltrosDrawer({
     let vigente = true;
     setCantidad(null);
     const t = setTimeout(() => {
-      fetch(`/api/catalogo/contar?${claveBorrador}`)
+      // La sección no viaja en la query del catálogo: se agrega para contar.
+      const seccion = borrador.seccion === "motos" ? "&seccion=motos" : "";
+      fetch(`/api/catalogo/contar?${claveBorrador}${seccion}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { total?: number } | null) => {
           if (vigente) setCantidad(typeof d?.total === "number" ? d.total : -1);
@@ -67,7 +69,7 @@ export function FiltrosDrawer({
       vigente = false;
       clearTimeout(t);
     };
-  }, [abierto, claveBorrador, claveActual, total]);
+  }, [abierto, claveBorrador, claveActual, total, borrador.seccion]);
 
   function abrir() {
     setBorrador(filtros);
@@ -80,7 +82,7 @@ export function FiltrosDrawer({
       ? "Ver resultados"
       : cantidad === 0
         ? "Sin resultados, probá sacar un filtro"
-        : `Ver ${cantidad} ${cantidad === 1 ? "auto" : "autos"}`;
+        : `Ver ${cantidad} ${nombreVehiculo(filtros, cantidad)}`;
 
   function aplicar() {
     router.push(urlCatalogo(borrador));

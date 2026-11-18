@@ -47,8 +47,15 @@ export function jsonLdAuto(auto: AutoCatalogo): JsonLdObjeto {
 
   return {
     "@context": "https://schema.org",
-    "@type": ["Car", "Product"],
+    // Moto: schema.org/Motorcycle (también subtipo de Vehicle), con su cilindrada.
+    "@type": [auto.carroceria === "moto" ? "Motorcycle" : "Car", "Product"],
     name: `${tituloAuto(auto)} ${auto.anio}`,
+    ...(auto.carroceria === "moto" && auto.cilindrada && {
+      vehicleEngine: {
+        "@type": "EngineSpecification",
+        engineDisplacement: { "@type": "QuantitativeValue", value: auto.cilindrada, unitCode: "CMQ" },
+      },
+    }),
     brand: { "@type": "Brand", name: auto.marca },
     model: auto.modelo,
     vehicleModelDate: String(auto.anio),

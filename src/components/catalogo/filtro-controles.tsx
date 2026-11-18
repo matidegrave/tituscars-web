@@ -133,12 +133,15 @@ export function OpcionBoton({
  * aparece y desaparece al hidratar, que movería la página).
  */
 export function FormFiltro({
+  action = "/autos",
   ocultos,
   onAplicar,
   botonSiempre = false,
   className,
   children,
 }: {
+  /** /autos o /motos (rutaCatalogo de los filtros). */
+  action?: string;
   ocultos: [string, string][];
   onAplicar: (datos: FormData) => void;
   botonSiempre?: boolean;
@@ -156,7 +159,7 @@ export function FormFiltro({
   return (
     <form
       method="get"
-      action="/autos"
+      action={action}
       className={className}
       onSubmit={(e) => {
         e.preventDefault();

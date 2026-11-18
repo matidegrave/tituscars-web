@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AutoGrid } from "@/components/auto-grid";
 import { cargarMasAutos } from "@/app/autos/acciones";
-import type { Filtros } from "@/lib/filtros";
+import { nombreVehiculo, type Filtros } from "@/lib/filtros";
 import type { AutoCatalogo } from "@/lib/types";
 import { BusquedaAMedidaDiferida } from "@/components/busqueda-a-medida-diferida";
 import { prellenadoDesdeFiltros } from "@/lib/aviso-busqueda";
@@ -152,7 +152,7 @@ export function CatalogoInfinito({
         {cargando && (
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Cargando más autos…
+            Cargando más {nombreVehiculo(filtros)}…
           </span>
         )}
         {error && !cargando && (
@@ -161,12 +161,12 @@ export function CatalogoInfinito({
             onClick={cargarMas}
             className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted"
           >
-            No se pudieron cargar más autos. Reintentar
+            No se pudieron cargar más {nombreVehiculo(filtros)}. Reintentar
           </button>
         )}
         {!hayMas && total > inicial.length && (
           <span className="text-sm text-muted-foreground">
-            Viste los {autos.length} autos disponibles
+            {filtros.seccion === "motos" ? "Viste las" : "Viste los"} {autos.length} {nombreVehiculo(filtros)} disponibles
           </span>
         )}
       </div>

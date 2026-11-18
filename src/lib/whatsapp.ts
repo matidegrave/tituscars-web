@@ -92,6 +92,28 @@ export function mensajeConsultaAuto({
 }
 
 /**
+ * Consulta por una moto (WEB-MOTOS1): "Hola, me interesa la moto Husqvarna
+ * 401 2023 — link". Mismo número y ruteo pauta/portales que los autos (lo
+ * pone linkVenta); con cita previa, la pregunta en una segunda línea.
+ */
+export function mensajeConsultaMoto({
+  marca,
+  modelo,
+  anio,
+  url,
+  conCita,
+}: {
+  marca: string;
+  modelo: string;
+  anio: number;
+  url: string;
+  conCita: boolean;
+}): string {
+  const linea = `Hola, me interesa la moto ${marca} ${modelo} ${anio} — ${url}`;
+  return conCita ? `${linea}\n¿Puedo coordinar una cita para verla?` : linea;
+}
+
+/**
  * Saca emojis (y sus modificadores) de un mensaje: algunos llegan a Kommo como
  * "�". Cubre también lo que el cliente escribe en los formularios.
  */

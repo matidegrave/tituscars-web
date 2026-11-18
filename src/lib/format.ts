@@ -61,3 +61,32 @@ export function tituloAuto(a: {
 }): string {
   return [a.marca, a.modelo, a.version].filter(Boolean).join(" ").toUpperCase();
 }
+
+/** Es una moto (carroceria = 'moto'): card, ficha y WhatsApp cambian (WEB-MOTOS1). */
+export function esMoto(a: { carroceria: string | null }): boolean {
+  return a.carroceria === "moto";
+}
+
+/** "400 cc", o null sin cilindrada. */
+export function formatCc(cc: number | null | undefined): string | null {
+  return cc ? `${numeroAR.format(cc)} cc` : null;
+}
+
+/**
+ * Datos de un vistazo (card y ficha), sin el año: auto "45.000 km · Nafta ·
+ * Automática"; moto "6.000 km · 400 cc" (sin combustible ni transmisión).
+ */
+export function datosVehiculo(a: {
+  km: number | null;
+  combustible: string | null;
+  transmision: string | null;
+  carroceria: string | null;
+  cilindrada?: number | null;
+}): string[] {
+  if (esMoto(a)) return [formatKm(a.km), formatCc(a.cilindrada)].filter((x): x is string => Boolean(x));
+  return [
+    formatKm(a.km),
+    a.combustible,
+    a.transmision === "manual" ? "Manual" : a.transmision === "automatica" ? "Automática" : null,
+  ].filter((x): x is string => Boolean(x));
+}

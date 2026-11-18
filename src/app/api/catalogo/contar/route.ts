@@ -14,7 +14,9 @@ export async function GET(request: Request) {
     const valores = params.getAll(clave);
     sp[clave] = valores.length > 1 ? valores : valores[0];
   }
-  const total = await contarAutos({ ...parseFiltros(sp), page: 1 });
+  // seccion=motos: el recuento del panel de /motos (WEB-MOTOS1).
+  const seccion = sp.seccion === "motos" ? "motos" : undefined;
+  const total = await contarAutos({ ...parseFiltros(sp, seccion), page: 1 });
   return Response.json(
     { total },
     { headers: { "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=60" } }

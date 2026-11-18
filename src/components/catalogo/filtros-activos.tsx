@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { X } from "lucide-react";
-import { PRECIO_PRESETS, urlCatalogo, type Filtros } from "@/lib/filtros";
+import { CILINDRADA_RANGOS, presetsPrecio, rutaCatalogo, urlCatalogo, type Filtros } from "@/lib/filtros";
 import { formatMiles } from "@/lib/format";
 
 const LABEL_TRANSMISION: Record<string, string> = {
@@ -71,7 +71,7 @@ export function FiltrosActivos({ filtros }: { filtros: Filtros }) {
   }
 
   if (filtros.precioMin || filtros.precioMax) {
-    const preset = PRECIO_PRESETS.find(
+    const preset = presetsPrecio(filtros.seccion).find(
       (p) => p.min === filtros.precioMin && p.max === filtros.precioMax
     );
     const label = preset
@@ -95,6 +95,11 @@ export function FiltrosActivos({ filtros }: { filtros: Filtros }) {
       label: `Hasta ${formatMiles(filtros.kmMax)} km`,
       filtrosSinEsto: { ...filtros, kmMax: undefined },
     });
+  }
+
+  const cc = CILINDRADA_RANGOS.find((r) => r.value === filtros.cc);
+  if (cc) {
+    chips.push({ key: "cc", label: cc.label, filtrosSinEsto: { ...filtros, cc: undefined } });
   }
 
   for (const c of filtros.combustible) {
@@ -163,7 +168,7 @@ export function FiltrosActivos({ filtros }: { filtros: Filtros }) {
         </Link>
       ))}
       <Link
-        href="/autos"
+        href={rutaCatalogo(filtros)}
         className="text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground"
       >
         Limpiar todo

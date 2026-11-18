@@ -14,6 +14,7 @@ function datosDelLink(link: HTMLAnchorElement): DatosEvento {
     slug: link.dataset.trackSlug || undefined,
     valor: Number.isFinite(valor) && valor > 0 ? valor : undefined,
     detalle: link.dataset.trackDetalle || undefined,
+    categoria: link.dataset.trackCategoria || undefined,
   };
 }
 
