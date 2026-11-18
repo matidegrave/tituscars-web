@@ -1,4 +1,4 @@
-import { filtrosAParams, type Filtros } from "@/lib/filtros";
+import { CILINDRADA_RANGOS, filtrosAParams, type Filtros } from "@/lib/filtros";
 import { nombrePropio, normalizar } from "@/lib/busqueda";
 import { formatMiles } from "@/lib/format";
 
@@ -10,7 +10,7 @@ import { formatMiles } from "@/lib/format";
  * páginas del servidor.
  */
 
-export type Origen = "sin_resultados" | "pie_ficha" | "pie_autos";
+export type Origen = "sin_resultados" | "pie_ficha" | "pie_autos" | "pie_motos";
 
 export const PRESUPUESTOS = [
   { valor: "10M", label: "$10M", monto: 10_000_000 },
@@ -20,14 +20,39 @@ export const PRESUPUESTOS = [
   { valor: "40M+", label: "$40M+", monto: null },
   { valor: "no_se", label: "No sé", monto: null },
 ] as const;
-export type Presupuesto = (typeof PRESUPUESTOS)[number]["valor"];
+// Motos (WEB-MOTOS2): otra escala.
+export const PRESUPUESTOS_MOTO = [
+  { valor: "3M", label: "$3M", monto: 3_000_000 },
+  { valor: "5M", label: "$5M", monto: 5_000_000 },
+  { valor: "8M", label: "$8M", monto: 8_000_000 },
+  { valor: "12M", label: "$12M", monto: 12_000_000 },
+  { valor: "12M+", label: "$12M+", monto: null },
+  { valor: "no_se", label: "No sé", monto: null },
+] as const;
+export type Presupuesto =
+  | (typeof PRESUPUESTOS)[number]["valor"]
+  | (typeof PRESUPUESTOS_MOTO)[number]["valor"];
+
+/** La escala de presupuesto del formulario (autos o motos). */
+export function presupuestosDe(d: Pick<DatosAviso, "moto">) {
+  return d.moto ? PRESUPUESTOS_MOTO : PRESUPUESTOS;
+}
+
+/** Cilindrada del pedido de moto: los rangos de /motos + "Indistinto". */
+export const CILINDRADAS = [...CILINDRADA_RANGOS.map((r) => r.label), "Indistinto"] as const;
 
 export const COMBUSTIBLES = ["Nafta", "Diésel", "GNC", "Híbrido", "Indistinto"] as const;
 export const TRANSMISIONES = ["Manual", "Automática", "Indistinto"] as const;
 export const CARROCERIAS = ["3p", "5p", "Sedán", "SUV", "Pick-up", "Indistinto"] as const;
 
 export interface DatosAviso {
+  /** Pedido de moto (WEB-MOTOS2): marca, modelo, cilindrada, años y presupuesto. */
+  moto: boolean;
+  /** Sólo en moto (en autos la marca va en `modelo`). */
+  marca: string;
   modelo: string;
+  /** Sólo en moto: "300 a 599 cc", "Indistinto"… */
+  cilindrada: string | null;
   anioDesde: number | null;
   anioHasta: number | null;
   presupuesto: Presupuesto | null;
@@ -54,7 +79,10 @@ export interface Prellenado {
 }
 
 export const VACIO: DatosAviso = {
+  moto: false,
+  marca: "",
   modelo: "",
+  cilindrada: null,
   anioDesde: null,
   anioHasta: null,
   presupuesto: null,
@@ -114,14 +142,20 @@ export function modeloDesdeTexto(texto: string, marcas: string[] = []): string {
   return lindo;
 }
 
-function presupuestoDesde(min?: number, max?: number): Presupuesto | null {
+function presupuestoDesde(min?: number, max?: number, moto = false): Presupuesto | null {
+  const escala = moto ? PRESUPUESTOS_MOTO : PRESUPUESTOS;
+  const tope = moto ? "12M+" : "40M+";
+  const techo = moto ? 12_000_000 : 40_000_000;
   if (max) {
-    const chip = PRESUPUESTOS.find((p) => p.monto !== null && p.monto >= max - 1);
-    return chip ? chip.valor : "40M+";
+    const chip = escala.find((p) => p.monto !== null && p.monto >= max - 1);
+    return chip ? chip.valor : tope;
   }
-  if (min && min >= 40_000_000) return "40M+";
+  if (min && min >= techo) return tope;
   return null;
 }
+
+/** Datos para el formulario de "es una moto" (pie de una ficha de moto). */
+export const PRELLENADO_MOTO: Prellenado = { datos: { moto: true } };
 
 function unico(valores: string[], mapa: Record<string, string>): string | null {
   if (valores.length !== 1) return null;
@@ -130,16 +164,31 @@ function unico(valores: string[], mapa: Record<string, string>): string | null {
 
 /** Prellenado desde los filtros del catálogo (y la búsqueda de texto). */
 export function prellenadoDesdeFiltros(f: Filtros, extra?: { textoBuscado?: string }): Prellenado {
+  // /motos (WEB-MOTOS2): el formulario de moto, con marca, modelo (lo
+  // buscado), cilindrada, años y presupuesto de los filtros.
+  if (f.seccion === "motos") {
+    const params = filtrosAParams({ ...f, q: undefined, orden: "recientes", page: 1 }).toString();
+    return {
+      datos: {
+        moto: true,
+        marca: f.marca.length === 1 ? nombrePropio(f.marca[0]) : "",
+        modelo: nombrePropio([f.modelo.join(" "), f.q ?? ""].filter(Boolean).join(" ").trim()),
+        cilindrada: CILINDRADA_RANGOS.find((r) => r.value === f.cc)?.label ?? null,
+        anioDesde: f.anioMin ?? null,
+        anioHasta: f.anioMax ?? null,
+        presupuesto: presupuestoDesde(f.precioMin, f.precioMax, true),
+      },
+      q: f.q,
+      filtrosActivos: params || undefined,
+    };
+  }
   const marcas = f.marca;
   const texto = [f.modelo.join(" "), f.q ?? ""].filter(Boolean).join(" ");
-  const modeloBase = texto
+  const modelo = texto
     ? modeloDesdeTexto(texto, marcas)
     : marcas.length > 0
       ? marcas.map(nombrePropio).join(" / ")
       : extra?.textoBuscado ?? "";
-  // Desde /motos (WEB-MOTOS1) el pedido aclara que es una moto.
-  const modelo =
-    f.seccion === "motos" && !/\bmoto/i.test(modeloBase) ? `Moto ${modeloBase}`.trim() : modeloBase;
   const params = filtrosAParams({ ...f, q: undefined, orden: "recientes", page: 1 }).toString();
   return {
     datos: {
@@ -164,8 +213,28 @@ function rangoAnios(d: DatosAviso): string | null {
   return null;
 }
 
+/** "Benelli Leoncino" (moto: marca + modelo; auto: el campo único). */
+export function queBusca(d: Pick<DatosAviso, "moto" | "marca" | "modelo">): string {
+  const texto = d.moto ? `${d.marca} ${d.modelo}` : d.modelo;
+  return texto.trim().replace(/\s+/g, " ");
+}
+
+/** Mensaje de una moto: "Hola, estoy buscando una moto Benelli Leoncino." y lo completado. */
+function mensajeMoto(d: DatosAviso): string {
+  const lineas = [`Hola, estoy buscando una moto ${queBusca(d)}.`.replace(" .", ".")];
+  if (d.cilindrada) lineas.push(`Cilindrada: ${d.cilindrada}`);
+  const anios = rangoAnios(d);
+  if (anios) lineas.push(`Años: ${anios}`);
+  const p = PRESUPUESTOS_MOTO.find((x) => x.valor === d.presupuesto);
+  if (p && p.valor === "12M+") lineas.push("Presupuesto: más de $12M");
+  else if (p && p.monto) lineas.push(`Presupuesto: hasta ${p.label}`);
+  lineas.push("Avísenme si entra una.");
+  return lineas.join("\n");
+}
+
 /** Mensaje de WhatsApp: ordenado, sin emojis y sólo con lo completado. */
 export function construirMensaje(d: DatosAviso): string {
+  if (d.moto) return mensajeMoto(d);
   const lineas = [`Hola, estoy buscando un ${d.modelo.trim()}.`];
   const anios = rangoAnios(d);
   if (anios) lineas.push(`Años: ${anios}`);
@@ -213,10 +282,12 @@ export function cuerpoBusqueda(
   d: DatosAviso,
   extra: { origen: Origen; q?: string; filtrosActivos?: string; autoSlug?: string; pagina: string; trampa: string }
 ) {
-  const p = PRESUPUESTOS.find((x) => x.valor === d.presupuesto);
+  const p = presupuestosDe(d).find((x) => x.valor === d.presupuesto);
+  // Moto (WEB-MOTOS2): "Moto Benelli Leoncino" y, en datos, tipo/marca/cilindrada.
+  const busca = d.moto ? `Moto ${queBusca(d)}`.trim() : d.modelo.trim();
   return {
     web: extra.trampa,
-    modelos_buscados: d.modelo.trim().slice(0, 300),
+    modelos_buscados: busca.slice(0, 300),
     presupuesto_max: p?.monto ?? null,
     entrega_vehiculo: d.entrega === true,
     entrega_modelo: d.entrega ? d.entregaModelo.trim().slice(0, 120) || null : null,
@@ -235,6 +306,9 @@ export function cuerpoBusqueda(
       transmision: d.transmision,
       carroceria: d.carroceria,
       detalle: d.detalle.trim().slice(0, 200) || null,
+      ...(d.moto
+        ? { tipo: "moto", marca: d.marca.trim().slice(0, 60) || null, cilindrada: d.cilindrada }
+        : {}),
       q: extra.q?.slice(0, 100) ?? null,
       filtros_activos: extra.filtrosActivos?.slice(0, 500) ?? null,
     },

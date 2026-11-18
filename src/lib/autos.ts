@@ -13,8 +13,8 @@ const TABLA = "catalogo_publico";
 
 // Autos y motos (WEB-MOTOS1): /autos y los carruseles de autos de la home
 // muestran todo menos carroceria = 'moto' (la carrocería vacía cuenta como
-// auto); /motos y el bloque Motos de la home, sólo esas. Las fichas
-// (/autos/:slug), el sitemap y los favoritos no distinguen.
+// auto); /motos y el bloque Motos de la home, sólo esas. El sitemap y los
+// favoritos traen las dos; cada ficha vive en su sección (/autos o /motos).
 const SIN_MOTOS = "carroceria.is.null,carroceria.neq.moto";
 
 /** La consulta, recortada a la sección (autos: sin motos; motos: sólo motos). */
@@ -33,12 +33,13 @@ export async function getTotalEnStock(seccion?: Seccion): Promise<number> {
 
 export interface AutoParaSitemap {
   slug: string;
+  carroceria: string | null;
   actualizado_en: string;
 }
 
 /** Slug + fecha de actualización de cada auto, para el sitemap (tanda 7). */
 export async function getAutosParaSitemap(): Promise<AutoParaSitemap[]> {
-  const { data } = await supabase.from(TABLA).select("slug, actualizado_en").neq("estado", "senado");
+  const { data } = await supabase.from(TABLA).select("slug, carroceria, actualizado_en").neq("estado", "senado");
   return data ?? [];
 }
 

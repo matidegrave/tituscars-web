@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { bajaDePrecio, datosVehiculo, formatPrecio, tituloAuto } from "@/lib/format";
+import { bajaDePrecio, datosVehiculo, esMoto, formatPrecio, rutaFicha, tituloAuto } from "@/lib/format";
 import { PastillaDisponibilidad } from "@/components/pastilla-disponibilidad";
 import { ExtrasCard } from "@/components/vendedor/herramientas-card";
 import { datosParaCliente } from "@/lib/para-cliente";
@@ -29,7 +29,7 @@ export function AutoCard({
   return (
     <div className="relative flex flex-col">
       <Link
-        href={`/autos/${auto.slug}`}
+        href={rutaFicha(auto)}
         data-card={auto.slug}
         data-posicion={posicion}
         className="group flex flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-shadow hover:shadow-md"
@@ -106,6 +106,7 @@ export function AutoCard({
           precio,
           datos: datosParaCliente(auto),
           foto: auto.foto_principal,
+          moto: esMoto(auto),
         }}
       />
     </div>

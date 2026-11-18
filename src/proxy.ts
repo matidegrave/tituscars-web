@@ -122,7 +122,12 @@ function redireccion(request: NextRequest, pathname: string): NextResponse | nul
 const RUTA_NO_DISPONIBLE = "/ficha-no-disponible";
 const VIGENCIA_MS = 60 * 1000;
 
-type AutoSlug = { id: string; slug: string };
+type AutoSlug = { id: string; slug: string; carroceria: string | null };
+
+/** /motos para una moto, /autos para el resto (WEB-MOTOS2). */
+function seccionDe(a: AutoSlug): "autos" | "motos" {
+  return a.carroceria === "moto" ? "motos" : "autos";
+}
 
 // Lista de slugs vigentes en memoria por 60 s, para no sumar una consulta en
 // cada visita. Si un slug no está, se vuelve a consultar antes de decidir (un
@@ -138,7 +143,7 @@ let cache: { autos: AutoSlug[]; hasta: number } | null = null;
 async function slugsVigentes(forzar: boolean): Promise<AutoSlug[] | null> {
   if (!forzar && cache && cache.hasta > Date.now()) return cache.autos;
   try {
-    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/catalogo_publico?select=id,slug&estado=neq.senado`;
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/catalogo_publico?select=id,slug,carroceria&estado=neq.senado`;
     const clave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
     const res = await fetch(url, {
       headers: { apikey: clave, Authorization: `Bearer ${clave}` },
@@ -153,14 +158,29 @@ async function slugsVigentes(forzar: boolean): Promise<AutoSlug[] | null> {
   }
 }
 
-async function resolverFicha(request: NextRequest, slug: string): Promise<NextResponse> {
+async function resolverFicha(
+  request: NextRequest,
+  seccion: "autos" | "motos",
+  slug: string
+): Promise<NextResponse> {
   const seguir = () => NextResponse.next({ request: { headers: request.headers } });
 
   let autos = await slugsVigentes(false);
   if (autos && !autos.some((a) => a.slug === slug)) autos = await slugsVigentes(true);
   // Sin datos (Supabase caído): que la página resuelva como siempre.
   if (!autos) return seguir();
-  if (autos.some((a) => a.slug === slug)) return seguir();
+  const auto = autos.find((a) => a.slug === slug);
+  if (auto) {
+    // Moto en /autos (links viejos, Google) o auto en /motos: 301 a su
+    // sección, con la query (utm de un anuncio) intacta (WEB-MOTOS2).
+    if (seccionDe(auto) !== seccion) {
+      return NextResponse.redirect(
+        urlDestino(request, `/${seccionDe(auto)}/${slug}`, request.nextUrl.search),
+        301
+      );
+    }
+    return seguir();
+  }
 
   const sufijo = slug.match(/-([0-9a-f]{6})$/i)?.[1]?.toLowerCase();
   if (sufijo) {
@@ -168,7 +188,8 @@ async function resolverFicha(request: NextRequest, slug: string): Promise<NextRe
       (a) => a.slug.endsWith(`-${sufijo}`) && a.id.startsWith(sufijo)
     );
     if (candidatos.length === 1) {
-      return NextResponse.redirect(urlDestino(request, `/autos/${candidatos[0].slug}`), 308);
+      const c = candidatos[0];
+      return NextResponse.redirect(urlDestino(request, `/${seccionDe(c)}/${c.slug}`), 308);
     }
   }
 
@@ -186,7 +207,7 @@ async function resolverFicha(request: NextRequest, slug: string): Promise<NextRe
 // (con extensión: robots.txt, sitemap.xml, /brand/logo.png, /reels/x.mp4…)
 // siempre pasan.
 const RUTAS_PROPIAS =
-  /^\/(?:$|autos(?:\/[^/]+)?$|motos$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|favoritos$|informe\/[^/]+$|usados\/[a-z0-9]+(?:-[a-z0-9]+)*$|ficha-no-disponible$|ml-callback$|api\/|_next\/|_vercel\/|\.well-known\/)/;
+  /^\/(?:$|autos(?:\/[^/]+)?$|motos(?:\/[^/]+)?$|consigna(?:\/whatsapp)?$|contacto$|financiacion$|nosotros$|links$|favoritos$|informe\/[^/]+$|usados\/[a-z0-9]+(?:-[a-z0-9]+)*$|ficha-no-disponible$|ml-callback$|api\/|_next\/|_vercel\/|\.well-known\/)/;
 
 function esRutaPropia(pathname: string): boolean {
   return RUTAS_PROPIAS.test(pathname) || /\.[a-z0-9]+$/i.test(pathname);
@@ -421,8 +442,8 @@ async function rutear(request: NextRequest): Promise<Response> {
   }
 
   // 7. Fichas
-  const ficha = pathname.match(/^\/autos\/([^/]+)$/);
-  if (ficha) return resolverFicha(request, decodeURIComponent(ficha[1]));
+  const ficha = pathname.match(/^\/(autos|motos)\/([^/]+)$/);
+  if (ficha) return resolverFicha(request, ficha[1] as "autos" | "motos", decodeURIComponent(ficha[2]));
 
   // Con las cookies del request (puede traer la de pauta recién puesta).
   return NextResponse.next({ request: { headers: request.headers } });

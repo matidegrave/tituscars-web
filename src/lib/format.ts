@@ -90,3 +90,8 @@ export function datosVehiculo(a: {
     a.transmision === "manual" ? "Manual" : a.transmision === "automatica" ? "Automática" : null,
   ].filter((x): x is string => Boolean(x));
 }
+
+/** Ruta de la ficha: /motos/<slug> para una moto, /autos/<slug> para el resto. */
+export function rutaFicha(a: { slug: string; carroceria: string | null }): string {
+  return `${esMoto(a) ? "/motos" : "/autos"}/${a.slug}`;
+}

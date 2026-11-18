@@ -2,7 +2,7 @@
 // Google. Se renderizan en el servidor con <JsonLd>.
 
 import { parsePublicacion } from "@/lib/descripcion";
-import { tituloAuto } from "@/lib/format";
+import { rutaFicha, tituloAuto } from "@/lib/format";
 import {
   DIRECCION_CALLE,
   DIRECCION_LOCALIDAD,
@@ -39,7 +39,7 @@ function descripcionAuto(auto: AutoCatalogo): string | undefined {
  * (fragmento con precio) si el tipo Product está declarado explícitamente.
  */
 export function jsonLdAuto(auto: AutoCatalogo): JsonLdObjeto {
-  const url = `${SITE_URL}/autos/${auto.slug}`;
+  const url = `${SITE_URL}${rutaFicha(auto)}`;
   const condicion =
     auto.condicion === "0km" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition";
   const fotos = (auto.fotos ?? []).map((f) => absoluta(f.url));
@@ -144,7 +144,7 @@ export function jsonLdListaAutos(autos: AutoCatalogo[], nombre?: string): JsonLd
     itemListElement: autos.slice(0, 24).map((auto, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${SITE_URL}/autos/${auto.slug}`,
+      url: `${SITE_URL}${rutaFicha(auto)}`,
       ...(nombre && { name: `${auto.marca} ${auto.modelo} ${auto.anio}` }),
     })),
   };

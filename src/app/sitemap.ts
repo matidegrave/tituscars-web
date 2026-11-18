@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAutosParaSitemap } from "@/lib/autos";
 import { SITE_URL } from "@/lib/config";
+import { rutaFicha } from "@/lib/format";
 import { getResumenStock } from "@/lib/autos";
 import { MINIMO_INDEXABLE, hrefPagina, paginasConStock } from "@/lib/usados";
 
@@ -38,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const fichas: MetadataRoute.Sitemap = autos.map((a) => ({
-    url: `${SITE_URL}/autos/${a.slug}`,
+    url: `${SITE_URL}${rutaFicha(a)}`,
     lastModified: new Date(a.actualizado_en),
     changeFrequency: "weekly",
     priority: 0.7,

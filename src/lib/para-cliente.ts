@@ -20,6 +20,8 @@ export interface AutoParaCliente {
   datos: string;
   /** "$ 27.500.000" */
   precio: string;
+  /** Moto: el link va a /motos/<slug> (WEB-MOTOS2). */
+  moto?: boolean;
 }
 
 /** "45.000 km · Nafta · Automática", moto "6.000 km · 400 cc" (sin el año: va en la primera línea). */
@@ -31,13 +33,13 @@ export function datosParaCliente(
 
 export const ENCABEZADO_POR_DEFECTO = "Te paso algunas opciones:";
 
-export function linkParaCliente(slug: string, vendedor: string): string {
+export function linkParaCliente(slug: string, vendedor: string, moto = false): string {
   const q = new URLSearchParams({
     utm_source: "vendedor",
     utm_medium: "whatsapp",
     utm_campaign: vendedor,
   });
-  return `${SITE_URL}/autos/${slug}?${q.toString()}`;
+  return `${SITE_URL}/${moto ? "motos" : "autos"}/${slug}?${q.toString()}`;
 }
 
 /**
@@ -51,7 +53,7 @@ export function textoParaCliente(a: AutoParaCliente, vendedor: string): string {
     `${a.titulo} ${a.anio}`,
     a.datos,
     a.precio,
-    linkParaCliente(a.slug, vendedor),
+    linkParaCliente(a.slug, vendedor, a.moto),
   ]
     .filter(Boolean)
     .join("\n");
