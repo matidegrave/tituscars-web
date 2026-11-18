@@ -935,3 +935,37 @@ test("«Te lo buscamos» en /motos: campos de moto y mensaje de moto", async (t)
     await browser.close();
   }
 });
+
+test("selector Autos | Motos: conserva condición y utm, marca el activo, 360 sin scroll", async (t) => {
+  const motos = await motosDeLaVista(t);
+  if (!motos) return;
+  const html = await (await fetch(`${BASE}/autos?condicion=usado&utm_source=ig&utm_medium=paid&marca=fiat`)).text();
+  const nav = html.match(/<nav aria-label="Autos o motos"[\s\S]*?<\/nav>/)?.[0] ?? "";
+  assert.ok(nav, "no está el selector Autos | Motos en /autos");
+  assert.match(nav, /href="\/motos\?condicion=usado&amp;utm_source=ig&amp;utm_medium=paid"/, `link a Motos: ${nav}`);
+  const activo = (n) => (n.match(/<a [^>]*aria-current="page"[^>]*>/)?.[0] ?? "").match(/href="([^"]*)"/)?.[1];
+  assert.equal(activo(nav), "/autos?condicion=usado&amp;utm_source=ig&amp;utm_medium=paid", `Autos activo: ${nav}`);
+  const navM = (await (await fetch(`${BASE}/motos`)).text()).match(/<nav aria-label="Autos o motos"[\s\S]*?<\/nav>/)?.[0] ?? "";
+  assert.equal(activo(navM), "/motos", `Motos activo en /motos: ${navM}`);
+
+  const browser = await chromium.launch();
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
+    await ctx.route("**/api/track", (r) => r.fulfill({ status: 204 }));
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/motos?condicion=usado`);
+    const sel = await page.locator('nav[aria-label="Autos o motos"]').boundingBox();
+    const cond = await page.getByRole("link", { name: "0 KM" }).first().boundingBox();
+    assert.ok(sel && cond && sel.y + sel.height <= cond.y, "a 360 el selector no está en su fila arriba de Todos | Usados | 0 KM");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360, "scroll horizontal a 360");
+    // Home: «Motos» hace que el buscador busque en /motos.
+    await page.goto(`${BASE}/`);
+    await page.locator('[aria-label="Buscar autos o motos"]').getByRole("button", { name: "Motos" }).click();
+    await page.locator("#buscador-home").fill("benelli");
+    await page.locator("#buscador-home").press("Enter");
+    await page.waitForURL(/\/motos\?/, { timeout: 10_000 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 360, "scroll horizontal a 360");
+  } finally {
+    await browser.close();
+  }
+});
